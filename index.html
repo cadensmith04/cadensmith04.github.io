@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caden Smith</title>
+<meta name="description" content="Caden Smith. Georgia Tech Industrial Engineering, incoming MS in Quantitative and Computational Finance. Projects in quantitative finance, risk, and asset management.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --ink: #14202e;
+    --muted: #5b6573;
+    --line: #dcd7cc;
+    --accent: #1f5f4a;
+    --card: #fffdf8;
+    --gold: #b3892f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: 17px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px; }
+
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(246, 244, 239, 0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; justify-content: space-between; align-items: center; height: 60px; }
+  .mark { font-family: "Fraunces", serif; font-weight: 600; font-size: 20px; color: var(--ink); }
+  nav ul { display: flex; gap: 26px; list-style: none; }
+  nav ul a { color: var(--muted); font-size: 15px; font-weight: 500; }
+  nav ul a:hover { color: var(--ink); text-decoration: none; }
+
+  header.hero { padding: 96px 0 72px; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: 13px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: "Fraunces", serif; font-weight: 600;
+    font-size: clamp(42px, 7vw, 68px); line-height: 1.05; letter-spacing: -0.02em;
+  }
+  .lede { max-width: 640px; margin-top: 22px; font-size: 19px; color: var(--muted); }
+  .links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  .btn {
+    display: inline-block; padding: 10px 18px; border-radius: 6px;
+    border: 1px solid var(--ink); color: var(--ink); font-weight: 500; font-size: 15px;
+  }
+  .btn.primary { background: var(--ink); color: var(--bg); }
+  .btn:hover { text-decoration: none; opacity: 0.85; }
+
+  section { padding: 72px 0; border-bottom: 1px solid var(--line); }
+  h2 {
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 32px;
+    letter-spacing: -0.01em; margin-bottom: 28px;
+  }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .section-head .num { font-family: "JetBrains Mono", monospace; color: var(--gold); font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 24px; display: flex; flex-direction: column; gap: 12px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(20, 32, 46, 0.07); }
+  .card h3 { font-size: 19px; font-weight: 600; line-height: 1.3; }
+  .card p { color: var(--muted); font-size: 15.5px; flex: 1; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-family: "JetBrains Mono", monospace; font-size: 12px;
+    padding: 3px 8px; border-radius: 4px; background: #ebe7dd; color: var(--ink);
+  }
+  .status { font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .status.live { color: var(--accent); }
+  .status.wip { color: var(--gold); }
+  .card-links { display: flex; gap: 16px; font-size: 14.5px; font-weight: 500; }
+
+  .row { display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; padding-top: 0; }
+  .row .when { font-family: "JetBrains Mono", monospace; font-size: 13.5px; color: var(--muted); padding-top: 3px; }
+  .row h3 { font-size: 18px; font-weight: 600; }
+  .row .org { color: var(--muted); font-size: 15.5px; margin-bottom: 8px; }
+  .row ul { padding-left: 18px; color: var(--ink); font-size: 15.5px; }
+  .row li { margin-top: 4px; }
+
+  .about p { max-width: 700px; margin-bottom: 16px; }
+  .focus { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .focus span { border: 1px solid var(--line); background: var(--card); padding: 6px 12px; border-radius: 999px; font-size: 14.5px; }
+
+  footer { padding: 48px 0 64px; color: var(--muted); font-size: 14.5px; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 640px) {
+    nav ul { gap: 16px; }
+    nav ul li.hide-sm { display: none; }
+    .row { grid-template-columns: 1fr; gap: 6px; }
+    header.hero { padding: 64px 0 52px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="mark" href="#">Caden Smith</a>
+    <ul>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#experience">Experience</a></li>
+      <li class="hide-sm"><a href="#about">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Georgia Tech &middot; Quantitative Finance</div>
+    <h1>Caden Smith</h1>
+    <p class="lede">Industrial Engineering at Georgia Tech, starting the MS in Quantitative and Computational Finance in January 2027. I build tools for pricing, risk, and portfolio analysis. Looking for Summer 2027 internships in asset management, quantitative research, and risk management.</p>
+    <div class="links">
+      <a class="btn primary" href="#projects">View projects</a>
+      <a class="btn" href="resume.pdf">Resume</a>
+      <a class="btn" href="https://github.com/cadensmith04" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn" href="LINKEDIN_URL" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</header>
+
+<section id="projects">
+  <div class="wrap">
+    <div class="section-head"><h2>Projects</h2><span class="num">01</span></div>
+    <div class="grid">
+
+      <div class="card">
+        <span class="status wip">In progress</span>
+        <h3>Options Pricer and Greeks Explorer</h3>
+        <p>Black Scholes and binomial pricing with an implied volatility solver. Interactive sliders show how each Greek responds to price, time, and volatility.</p>
+        <div class="tags"><span class="tag">Derivatives</span><span class="tag">Python</span><span class="tag">JavaScript</span></div>
+      </div>
+
+      <div class="card">
+        <span class="status wip">In progress</span>
+        <h3>VaR and CVaR Risk Dashboard</h3>
+        <p>Historical, parametric, and Monte Carlo Value at Risk on a sample portfolio, with a breach backtest to test whether each model holds up.</p>
+        <div class="tags"><span class="tag">Risk</span><span class="tag">Monte Carlo</span><span class="tag">Backtesting</span></div>
+      </div>
+
+      <div class="card">
+        <span class="status live">Complete</span>
+        <h3>2026 World Cup Bracket and Odds Simulator</h3>
+        <p>Monte Carlo tournament simulator using real match data, sportsbook outright odds, and the official knockout bracket structure.</p>
+        <div class="tags"><span class="tag">Simulation</span><span class="tag">Probability</span><span class="tag">React</span></div>
+      </div>
+
+      <div class="card">
+        <span class="status live">Complete</span>
+        <h3>Market Regime Classifier</h3>
+        <p>Machine learning model that classifies market regimes from price and volatility features. Writeup with baseline comparison and walk forward results coming soon.</p>
+        <div class="tags"><span class="tag">Machine Learning</span><span class="tag">Python</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="experience">
+  <div class="wrap">
+    <div class="section-head"><h2>Experience</h2><span class="num">02</span></div>
+
+    <div class="row">
+      <div class="when">Summer 2026</div>
+      <div>
+        <h3>Intern</h3>
+        <div class="org">OpenArc Corporate Advisory &middot; Atlanta, GA &middot; ~$14B AUM independent RIA</div>
+        <ul>
+          <li>Audited eMoney to Black Diamond plan syncing across 62 advisor books and identified ~780 plans the automated sync could not reach.</li>
+          <li>Built an Excel model that ranks high net worth households for review by tier and cadence, weighted on recent meetings, calls, and activity.</li>
+          <li>Produced client facing research, including SpaceX IPO portfolio impact analysis and private music rights fund diligence.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="when">Previous</div>
+      <div>
+        <h3>Industrial Engineering Intern</h3>
+        <div class="org">UPS &middot; Americas Region</div>
+        <ul>
+          <li>Built a network map in ArcGIS to support regional operations analysis.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="about">
+  <div class="wrap">
+    <div class="section-head"><h2>About</h2><span class="num">03</span></div>
+    <p>I study Industrial Engineering at Georgia Tech with a concentration in Economic and Financial Systems and a minor in FinTech, graduating December 2026. In January I start Georgia Tech's MS in Quantitative and Computational Finance.</p>
+    <p>This site collects the projects I build along the way. Each one has an interactive demo, a short writeup of the method and results, and the code.</p>
+    <div class="focus">
+      <span>Asset Management</span><span>Quantitative Research</span><span>Risk Management</span><span>Python</span><span>SQL</span><span>R</span><span>Excel</span>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="wrap">
+    <div class="section-head"><h2>Contact</h2><span class="num">04</span></div>
+    <p class="lede" style="margin-top:0">The best way to reach me is email or LinkedIn.</p>
+    <div class="links">
+      <a class="btn primary" href="mailto:EMAIL_ADDRESS">Email</a>
+      <a class="btn" href="LINKEDIN_URL" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn" href="https://github.com/cadensmith04" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; 2026 Caden Smith</span>
+    <span>Atlanta, GA</span>
+  </div>
+</footer>
+
+</body>
+</html>
