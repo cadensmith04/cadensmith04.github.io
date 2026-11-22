@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Did the Market See Spain Coming? | Caden Smith</title>
+<meta name="description" content="A Monte Carlo forecast of the 2026 World Cup calibrated to betting market prices, scored against what actually happened.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f4ef; --ink: #14202e; --muted: #5b6573; --faint: #8a929d; --line: #dcd7cc;
+    --accent: #1f5f4a; --accent-soft: #e3eee9; --card: #fffdf8; --gold: #b3892f; --miss: #b4483c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; font-size: 16.5px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  .mono { font-family: "JetBrains Mono", monospace; }
+
+  nav { position: sticky; top: 0; z-index: 20; background: rgba(246,244,239,0.93); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; justify-content: space-between; align-items: center; height: 58px; }
+  .mark { font-family: "Fraunces", serif; font-weight: 600; font-size: 19px; color: var(--ink); }
+  nav .back { font-size: 14.5px; color: var(--muted); font-weight: 500; }
+
+  header { padding: 72px 0 48px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+  h1 { font-family: "Fraunces", serif; font-weight: 600; font-size: clamp(36px, 6vw, 58px); line-height: 1.06; letter-spacing: -0.02em; max-width: 820px; }
+  .lede { max-width: 700px; margin-top: 20px; font-size: 18.5px; color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-top: 40px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .tile .big { font-family: "Fraunces", serif; font-size: 36px; font-weight: 600; line-height: 1.1; }
+  .tile .lbl { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+  section { padding: 60px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-family: "Fraunces", serif; font-weight: 600; font-size: 29px; letter-spacing: -0.01em; margin-bottom: 10px; }
+  .sub { color: var(--muted); max-width: 720px; margin-bottom: 26px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 22px; }
+  .ctrl label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .ctrl input[type=range] { width: 230px; accent-color: var(--accent); }
+  .ctrl .val { font-family: "JetBrains Mono", monospace; font-size: 14px; margin-left: 8px; }
+  button { font: inherit; font-weight: 500; font-size: 14.5px; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); cursor: pointer; }
+  button.ghost { background: transparent; color: var(--ink); }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  select { font: inherit; font-size: 14.5px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); }
+  .scores { display: flex; gap: 26px; margin-left: auto; }
+  .scores div { text-align: right; }
+  .scores b { display: block; font-family: "JetBrains Mono", monospace; font-size: 20px; font-weight: 500; }
+  .scores span { font-size: 12.5px; color: var(--muted); }
+  .status { font-size: 13px; color: var(--faint); font-family: "JetBrains Mono", monospace; min-height: 18px; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 7px 10px; text-align: right; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f0ece3; font-weight: 600; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; border-bottom: 1px solid var(--line); }
+  th:hover { color: var(--ink); }
+  th.l, td.l { text-align: left; }
+  tbody tr { border-top: 1px solid #eee9de; }
+  tbody tr:hover { background: #faf7f0; }
+  td.p { font-family: "JetBrains Mono", monospace; font-size: 13px; position: relative; }
+  td.p.hit { box-shadow: inset 0 -2px 0 var(--accent); font-weight: 500; }
+  .grp { color: var(--faint); font-family: "JetBrains Mono", monospace; font-size: 12px; }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #ebe7dd; color: var(--ink); }
+  .badge.champ { background: var(--ink); color: var(--bg); }
+  .badge.deep { background: var(--accent-soft); color: var(--accent); }
+  .legend-note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .legend-note .sw { display: inline-block; width: 22px; height: 10px; vertical-align: middle; border-bottom: 2px solid var(--accent); margin-right: 4px; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; position: relative; }
+  .panel h3 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+  .panel .note { font-size: 13.5px; color: var(--muted); margin-bottom: 10px; }
+  svg text { font-family: "Inter", sans-serif; }
+  .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity 0.1s; z-index: 5; }
+
+  .bracket { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+  .round h4 { font-size: 12px; font-family: "JetBrains Mono", monospace; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+  .round .col { display: flex; flex-direction: column; justify-content: space-around; height: 100%; gap: 8px; }
+  .match { background: var(--card); border: 1px solid var(--line); border-radius: 7px; font-size: 13px; overflow: hidden; }
+  .match .tm { display: flex; justify-content: space-between; padding: 4px 8px; gap: 8px; }
+  .match .tm + .tm { border-top: 1px solid #eee9de; }
+  .match .w { font-weight: 600; }
+  .match .l { color: var(--faint); }
+  .match .sc { font-family: "JetBrains Mono", monospace; font-size: 12px; }
+  .match .pr { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--gold); padding: 2px 8px 4px; background: #fbf8f1; }
+  .match.upset { border-color: var(--gold); }
+
+  .surprises { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .surprises li { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+  .surprises .pct { font-family: "JetBrains Mono", monospace; font-weight: 500; color: var(--gold); }
+
+  .writeup { max-width: 760px; }
+  .writeup h3 { font-family: "Fraunces", serif; font-size: 21px; font-weight: 600; margin: 30px 0 8px; }
+  .writeup p, .writeup li { margin-bottom: 10px; }
+  .writeup ul { padding-left: 20px; }
+  footer { padding: 40px 0 60px; color: var(--muted); font-size: 14px; }
+
+  @media (max-width: 760px) {
+    .two { grid-template-columns: 1fr; }
+    .scores { margin-left: 0; }
+    .bracket { grid-template-columns: repeat(5, 170px); }
+  }
+</style>
+</head>
+<body>
+
+<nav><div class="wrap"><a class="mark" href="../">Caden Smith</a><a class="back" href="../#projects">&larr; All projects</a></div></nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Project &middot; Monte Carlo &middot; Market implied ratings</div>
+    <h1>Did the betting market see Spain coming?</h1>
+    <p class="lede">I backed out a strength rating for all 48 teams from FanDuel's title odds three days before the 2026 World Cup, simulated the tournament tens of thousands of times, and scored the forecast against what actually happened.</p>
+    <div class="tiles">
+      <div class="tile"><div class="big" id="t-spain">14.9%</div><div class="lbl">Spain's title chance before kickoff, the highest of any team</div></div>
+      <div class="tile"><div class="big" id="t-skill">0.36</div><div class="lbl">Brier skill score vs. a naive forecast that treats every team equally</div></div>
+      <div class="tile"><div class="big">4 of 4</div><div class="lbl">Semifinalists who were top 6 in the market</div></div>
+      <div class="tile"><div class="big">~2.4&times;</div><div class="lbl">How much sharper the market should have been to score best</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="sim">
+  <div class="wrap">
+    <h2>Run the tournament</h2>
+    <p class="sub">Every number on this page is computed live in your browser. The confidence slider scales the gaps between team ratings: 1.0 is exactly what the market priced, below 1 means more upsets, above 1 means favorites win more often. Watch the scores as you move it.</p>
+    <div class="controls">
+      <div class="ctrl">
+        <label for="temp">Confidence (rating gap multiplier)</label>
+        <input type="range" id="temp" min="0.5" max="3" step="0.1" value="1"><span class="val" id="tempv">1.0&times;</span>
+      </div>
+      <div class="ctrl">
+        <label for="nsim">Simulations</label>
+        <select id="nsim"><option value="5000">5,000</option><option value="20000" selected>20,000</option><option value="50000">50,000</option></select>
+      </div>
+      <button id="run">Simulate</button>
+      <button id="one" class="ghost">Play one tournament</button>
+      <div class="scores">
+        <div><b id="s-brier">&ndash;</b><span>Brier score</span></div>
+        <div><b id="s-skill">&ndash;</b><span>Skill vs. naive</span></div>
+        <div><b id="s-ll">&ndash;</b><span>Log loss</span></div>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+    <div id="onebox" class="sub" style="display:none;margin:4px 0 18px"></div>
+
+    <div class="tablewrap">
+      <table id="tbl">
+        <thead><tr>
+          <th class="l" data-k="name">Team</th>
+          <th data-k="odds">Odds</th>
+          <th data-k="g">Win group</th>
+          <th data-k="r0">Advance</th>
+          <th data-k="r1">R16</th>
+          <th data-k="r2">QF</th>
+          <th data-k="r3">SF</th>
+          <th data-k="r4">Final</th>
+          <th data-k="r5">Champion</th>
+          <th class="l" data-k="fin">Actual finish</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="legend-note"><span class="sw"></span>Underlined cells are rounds the team actually reached. Cell shading is the forecast probability. Click any column to sort.</p>
+  </div>
+</section>
+
+<section id="scoring">
+  <div class="wrap">
+    <h2>How good was the forecast?</h2>
+    <p class="sub">Two checks. Calibration asks whether things the model called 30% happened about 30% of the time. The confidence curve asks how sharp the forecast should have been to score best on this tournament.</p>
+    <div class="two">
+      <div class="panel">
+        <h3>Calibration</h3>
+        <div class="note">All 288 team and round predictions, grouped by forecast probability. Dot size is the number of predictions in the group. Points on the diagonal are perfectly calibrated.</div>
+        <svg id="cal" viewBox="0 0 440 340" width="100%" role="img" aria-label="Calibration chart"></svg>
+        <div class="tip" id="caltip"></div>
+      </div>
+      <div class="panel">
+        <h3>Brier score vs. confidence</h3>
+        <div class="note">Lower is better. The market's own spread sits at 1.0&times;. The curve keeps falling until about 2.4&times;, meaning the favorites outperformed their odds.</div>
+        <svg id="curve" viewBox="0 0 440 340" width="100%" role="img" aria-label="Brier score by confidence multiplier"></svg>
+        <div class="tip" id="curvetip"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bracket-sec">
+  <div class="wrap">
+    <h2>The actual knockout bracket</h2>
+    <p class="sub">Real results, with the model's head to head win probability for each winner, including extra time and penalties. Gold borders mark upsets, where the winner had under a 45% chance. Moving the confidence slider updates these too.</p>
+    <div class="bracket" id="bracket"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Least likely things that happened</h2>
+    <p class="sub">Outcomes ranked by how little probability the forecast gave them, at the current confidence setting.</p>
+    <ul class="surprises" id="surprises"></ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap writeup">
+    <h2>Writeup</h2>
+
+    <h3>Question</h3>
+    <p>Betting markets are often treated as the best available forecast. A title price only says how likely a team is to win the whole tournament, though, and says nothing directly about the 103 other matches. I wanted to turn those prices into a full match level model, then test it: did the market's view of the field hold up against the real results?</p>
+
+    <h3>Method</h3>
+    <ul>
+      <li><b>Remove the vig.</b> FanDuel's 48 title prices from June 8, 2026 imply probabilities that sum to 122.9%. I scaled them proportionally to sum to 100%.</li>
+      <li><b>Goal model.</b> Each team gets one rating. In a match, each side's goals are Poisson with mean 1.3 &times; e<sup>&plusmn;(gap / 2)</sup>, so a bigger rating gap means a more lopsided expected score. Draws and goal difference come out naturally, which the group stage tiebreakers need. The three hosts get a small bump in group games.</li>
+      <li><b>Full 2026 format.</b> Twelve groups of four, the top two plus the eight best third place teams advance, and third place teams are slotted into the Round of 32 using FIFA's allowed group combinations. Knockout draws go to extra time at one third of the scoring rate, then a coin flip for penalties.</li>
+      <li><b>Calibrate to the market.</b> Starting from a guess, I ran 40,000 simulated tournaments, compared each team's simulated title rate to its market probability, nudged the rating in log space, and repeated 40 times. The fitted ratings reproduce the market's title odds to within a few tenths of a point for every contender. This is the same idea as backing implied volatility out of an option price: find the input that makes the model match the observed price.</li>
+      <li><b>Score it.</b> For each team and each round (advance, R16, QF, SF, final, title), the forecast probability is compared with what happened. I report the Brier score, log loss, and a Brier skill score against a naive model that gives every team the same chance of reaching each round.</li>
+    </ul>
+
+    <h3>Results</h3>
+    <ul>
+      <li>At the market's own spread, the forecast has a Brier skill score of about 0.36, a clear improvement over the naive baseline.</li>
+      <li>The final four were Spain, France, England, and Argentina, all top six in the market. Spain, the favorite at roughly 15%, won it.</li>
+      <li>The surprises came mostly early: Uruguay failing to get out of their group, Germany and the Netherlands both losing Round of 32 shootouts, and Norway beating Brazil.</li>
+      <li>Scaling the rating gaps up improves the score until about 2.4&times;. On this tournament the market was underconfident in its favorites. That fits the favorite longshot bias, a well documented pattern in betting markets where longshots are overpriced, and here 13 teams sat at the 2,500 to 1 cap.</li>
+    </ul>
+
+    <h3>Limitations</h3>
+    <ul>
+      <li><b>One tournament is one sample.</b> The 2.4&times; result is suggestive, not a trading rule. Picking the best multiplier after seeing the results is in sample fitting, and checking it properly needs several tournaments.</li>
+      <li><b>Thin information at the bottom.</b> Title odds can't separate teams that all sit at the sportsbook's maximum price, so those 13 teams share nearly the same rating. Match level odds would fix that.</li>
+      <li><b>Third place slotting.</b> FIFA uses a fixed lookup table for which third place teams meet which group winners. I use a valid matching under the same allowed combinations, which gives the right opponents in most cases but not every one.</li>
+      <li><b>Static ratings.</b> The model doesn't update for injuries, suspensions, or form during the tournament.</li>
+    </ul>
+
+    <h3>What I'd do next</h3>
+    <ul>
+      <li>Calibrate to closing odds for every group match instead of title odds alone, then compare the two.</li>
+      <li>Run the same pipeline on the 2018 and 2022 World Cups and Euro 2024 to test whether the underconfidence finding holds out of sample.</li>
+      <li>Swap the independent Poisson model for one that accounts for the correlation between the two teams' scores, which matters most for draw rates.</li>
+    </ul>
+
+    <h3>Code</h3>
+    <p>The simulation engine is <a href="https://github.com/cadensmith04/cadensmith04.github.io/blob/main/world-cup/sim.js" target="_blank" rel="noopener">sim.js</a>, the same file running on this page. Calibration and scoring scripts are in <a href="https://github.com/cadensmith04/cadensmith04.github.io/tree/main/world-cup/calibration" target="_blank" rel="noopener">world-cup/calibration</a>.</p>
+    <p style="color:var(--muted);font-size:14px">Data: FanDuel Sportsbook title odds as published by Sports Illustrated on June 8, 2026; group standings and knockout results from ESPN and GMA News match reports.</p>
+  </div>
+</section>
+
+<footer><div class="wrap">&copy; 2026 Caden Smith &middot; <a href="../">Home</a></div></footer>
+
+<script src="sim.js"></script>
+<script src="ratings.js"></script>
+<script>
+(function () {
+  const S = window.WCSim, RAT = window.WC_RATINGS;
+  const R = {}; Object.keys(RAT).forEach((t) => { R[t] = RAT[t][0]; });
+  const teams = Object.keys(R);
+  const groupOf = {}; Object.entries(S.GROUPS).forEach(([g, ts]) => ts.forEach((t) => { groupOf[t] = g; }));
+
+  // Actual results
+  const reached = {
+    1: ["Canada","South Africa","Brazil","Japan","Paraguay","Germany","Morocco","Netherlands","Norway","Ivory Coast","France","Sweden","Mexico","Ecuador","England","DR Congo","Belgium","Senegal","USA","Bosnia and Herzegovina","Spain","Austria","Portugal","Croatia","Switzerland","Algeria","Egypt","Australia","Argentina","Cape Verde","Colombia","Ghana"],
+    2: ["Canada","Brazil","Paraguay","Morocco","Norway","France","Mexico","England","Belgium","USA","Spain","Portugal","Switzerland","Egypt","Argentina","Colombia"],
+    3: ["France","Morocco","Norway","England","Spain","Belgium","Argentina","Switzerland"],
+    4: ["France","Spain","England","Argentina"],
+    5: ["Spain","Argentina"],
+    6: ["Spain"],
+  };
+  const groupWinners = ["Mexico","Switzerland","Brazil","USA","Germany","Netherlands","Belgium","Spain","France","Argentina","Colombia","England"];
+  const actual = {};
+  teams.forEach((t) => { actual[t] = [1,2,3,4,5,6].map((k) => reached[k].includes(t) ? 1 : 0); });
+  function finishLabel(t) {
+    if (t === "Spain") return ["Champion", "champ"];
+    if (t === "Argentina") return ["Runner up", "champ"];
+    if (t === "England") return ["Third place", "deep"];
+    if (t === "France") return ["Fourth place", "deep"];
+    const r = actual[t].lastIndexOf(1);
+    return [["Group stage", "Round of 32", "Round of 16", "Quarterfinal"][r + 1], r >= 2 ? "deep" : ""];
+  }
+
+  const KO = [
+    [["France","Sweden","3-0","France"],["Germany","Paraguay","1-1, 3-4 p","Paraguay"],["Netherlands","Morocco","1-1, 2-3 p","Morocco"],["South Africa","Canada","0-1","Canada"],
+     ["Spain","Austria","3-0","Spain"],["Portugal","Croatia","2-1","Portugal"],["Belgium","Senegal","3-2","Belgium"],["USA","Bosnia and Herzegovina","2-0","USA"],
+     ["England","DR Congo","2-1","England"],["Mexico","Ecuador","2-0","Mexico"],["Ivory Coast","Norway","1-2","Norway"],["Brazil","Japan","2-1","Brazil"],
+     ["Argentina","Cape Verde","3-2 aet","Argentina"],["Egypt","Australia","1-1, 4-2 p","Egypt"],["Switzerland","Algeria","2-0","Switzerland"],["Colombia","Ghana","1-0","Colombia"]],
+    [["France","Paraguay","1-0","France"],["Morocco","Canada","3-0","Morocco"],["Spain","Portugal","1-0","Spain"],["Belgium","USA","4-1","Belgium"],
+     ["England","Mexico","3-2","England"],["Norway","Brazil","2-1","Norway"],["Argentina","Egypt","3-2","Argentina"],["Switzerland","Colombia","0-0, 4-3 p","Switzerland"]],
+    [["France","Morocco","2-0","France"],["Spain","Belgium","2-1","Spain"],["England","Norway","2-1 aet","England"],["Argentina","Switzerland","3-1 aet","Argentina"]],
+    [["Spain","France","2-0","Spain"],["Argentina","England","2-1","Argentina"]],
+    [["Spain","Argentina","1-0 aet","Spain"]],
+  ];
+  const KO_NAMES = ["Round of 32", "Round of 16", "Quarterfinals", "Semifinals", "Final"];
+
+  let probs = null, temp = 1, sortKey = "r5", sortDir = -1;
+  const $ = (id) => document.getElementById(id);
+  const pct = (x) => x >= 0.995 ? ">99%" : x < 0.001 ? "<0.1%" : (x * 100).toFixed(x < 0.1 ? 1 : 0) + "%";
+
+  function amer(o) { return "+" + o.toLocaleString(); }
+
+  function scoreIt(p) {
+    let b = 0, bn = 0, ll = 0, n = 0;
+    for (let k = 0; k < 6; k++) {
+      const base = reached[k + 1].length / 48;
+      teams.forEach((t) => {
+        const q = Math.min(Math.max(p[t].reach[k], 1e-4), 1 - 1e-4), o = actual[t][k];
+        b += (q - o) ** 2; bn += (base - o) ** 2; ll -= o * Math.log(q) + (1 - o) * Math.log(1 - q); n++;
+      });
+    }
+    return { brier: b / n, skill: 1 - b / bn, ll: ll / n };
+  }
+
+  // Run simulation in chunks so the page stays responsive.
+  function run() {
+    const n = +$("nsim").value, chunk = 2500;
+    $("run").disabled = true; $("one").disabled = true;
+    const counts = {}, gw = {};
+    teams.forEach((t) => { counts[t] = [0,0,0,0,0,0,0]; gw[t] = 0; });
+    const rng = S.makeRng(20260611 + Math.round(temp * 10));
+    let done = 0; const t0 = performance.now();
+    function step() {
+      const m = Math.min(chunk, n - done);
+      for (let s = 0; s < m; s++) {
+        const { reach, groupWinners: g } = S.simulateOnce(R, temp, rng);
+        for (const t of teams) for (let k = 1; k <= reach[t]; k++) counts[t][k]++;
+        g.forEach((t) => { gw[t]++; });
+      }
+      done += m;
+      $("status").textContent = "Simulating " + done.toLocaleString() + " / " + n.toLocaleString() + " tournaments";
+      if (done < n) { setTimeout(step, 0); return; }
+      probs = {};
+      teams.forEach((t) => { probs[t] = { reach: counts[t].slice(1).map((c) => c / n), group: gw[t] / n }; });
+      $("status").textContent = n.toLocaleString() + " tournaments in " + ((performance.now() - t0) / 1000).toFixed(1) + "s at " + temp.toFixed(1) + "× confidence";
+      $("run").disabled = false; $("one").disabled = false;
+      render();
+    }
+    step();
+  }
+
+  function render() {
+    const sc = scoreIt(probs);
+    $("s-brier").textContent = sc.brier.toFixed(4);
+    $("s-skill").textContent = sc.skill.toFixed(2);
+    $("s-ll").textContent = sc.ll.toFixed(3);
+    if (Math.abs(temp - 1) < 0.01) {
+      $("t-skill").textContent = sc.skill.toFixed(2);
+      $("t-spain").textContent = (probs["Spain"].reach[5] * 100).toFixed(1) + "%";
+    }
+    renderTable(); renderCal(); renderBracket(); renderSurprises(); renderCurve();
+  }
+
+  function shade(x) { return "rgba(31, 95, 74, " + (0.04 + 0.5 * Math.sqrt(x)).toFixed(3) + ")"; }
+
+  function renderTable() {
+    const rows = teams.map((t) => {
+      const r = { name: t, odds: RAT[t][1], g: probs[t].group, fin: actual[t].lastIndexOf(1) + (t === "Spain" ? 1 : 0) };
+      probs[t].reach.forEach((x, k) => { r["r" + k] = x; });
+      return r;
+    });
+    rows.sort((a, b) => {
+      const x = a[sortKey], y = b[sortKey];
+      if (typeof x === "string") return sortDir * x.localeCompare(y);
+      return sortDir * (x - y) || (b.r5 - a.r5);
+    });
+    const tb = document.querySelector("#tbl tbody");
+    tb.innerHTML = rows.map((r) => {
+      const t = r.name, [lab, cls] = finishLabel(t);
+      let cells = "<td class='l'>" + t + " <span class='grp'>" + groupOf[t] + "</span></td>";
+      cells += "<td class='mono' style='font-size:13px;color:var(--muted)'>" + amer(r.odds) + "</td>";
+      const gHit = groupWinners.includes(t);
+      cells += "<td class='p" + (gHit ? " hit" : "") + "' style='background:" + shade(r.g) + "'>" + pct(r.g) + "</td>";
+      for (let k = 0; k < 6; k++) {
+        const x = r["r" + k];
+        cells += "<td class='p" + (actual[t][k] ? " hit" : "") + "' style='background:" + shade(x) + "'>" + pct(x) + "</td>";
+      }
+      cells += "<td class='l'><span class='badge " + cls + "'>" + lab + "</span></td>";
+      return "<tr>" + cells + "</tr>";
+    }).join("");
+    document.querySelectorAll("#tbl th").forEach((th) => {
+      th.textContent = th.textContent.replace(/ [▲▼]$/, "");
+      if (th.dataset.k === sortKey) th.textContent += sortDir < 0 ? " ▼" : " ▲";
+    });
+  }
+
+  // Shared chart helpers
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function frame(svg, xLabel, yLabel, xTicks, yTicks, X, Y, fmtX, fmtY) {
+    svg.innerHTML = "";
+    yTicks.forEach((v) => {
+      el("line", { x1: X(xTicks[0]), x2: X(xTicks[xTicks.length - 1]), y1: Y(v), y2: Y(v), stroke: "#ebe6dc", "stroke-width": 1 }, svg);
+      const tx = el("text", { x: X(xTicks[0]) - 8, y: Y(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#8a929d" }, svg); tx.textContent = fmtY(v);
+    });
+    xTicks.forEach((v) => {
+      const tx = el("text", { x: X(v), y: Y(yTicks[0]) + 18, "text-anchor": "middle", "font-size": 11, fill: "#8a929d" }, svg); tx.textContent = fmtX(v);
+    });
+    el("line", { x1: X(xTicks[0]), x2: X(xTicks[xTicks.length - 1]), y1: Y(yTicks[0]), y2: Y(yTicks[0]), stroke: "#b9b3a6", "stroke-width": 1 }, svg);
+    const xl = el("text", { x: (X(xTicks[0]) + X(xTicks[xTicks.length - 1])) / 2, y: 334, "text-anchor": "middle", "font-size": 12, fill: "#5b6573" }, svg); xl.textContent = xLabel;
+    const yl = el("text", { x: 14, y: (Y(yTicks[0]) + Y(yTicks[yTicks.length - 1])) / 2, "text-anchor": "middle", "font-size": 12, fill: "#5b6573", transform: "rotate(-90 14 " + ((Y(yTicks[0]) + Y(yTicks[yTicks.length - 1])) / 2) + ")" }, svg); yl.textContent = yLabel;
+  }
+  function tipAt(tip, panelSvg, x, y, html) {
+    const box = panelSvg.getBoundingClientRect(), pbox = panelSvg.parentNode.getBoundingClientRect();
+    const sx = box.width / 440;
+    tip.innerHTML = html; tip.style.opacity = 1;
+    tip.style.left = (box.left - pbox.left + x * sx + 12) + "px";
+    tip.style.top = (box.top - pbox.top + y * sx - 34) + "px";
+  }
+
+  function renderCal() {
+    const edges = [0, 0.05, 0.15, 0.3, 0.5, 0.7, 0.9, 1.0001];
+    const bins = edges.slice(0, -1).map(() => ({ n: 0, p: 0, o: 0 }));
+    teams.forEach((t) => {
+      for (let k = 0; k < 6; k++) {
+        const q = probs[t].reach[k];
+        const i = edges.findIndex((e, j) => q >= e && q < edges[j + 1]);
+        bins[i].n++; bins[i].p += q; bins[i].o += actual[t][k];
+      }
+    });
+    const svg = $("cal"), tip = $("caltip");
+    const X = (v) => 58 + v * 362, Y = (v) => 300 - v * 280;
+    const ticks = [0, 0.25, 0.5, 0.75, 1];
+    frame(svg, "Forecast probability", "Share that happened", ticks, ticks, X, Y, (v) => v * 100 + "%", (v) => v * 100 + "%");
+    el("line", { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), stroke: "#b9b3a6", "stroke-width": 1.5, "stroke-dasharray": "4 4" }, svg);
+    bins.forEach((b) => {
+      if (!b.n) return;
+      const px = b.p / b.n, ox = b.o / b.n, r = 4 + Math.sqrt(b.n) * 1.3;
+      const c = el("circle", { cx: X(px), cy: Y(ox), r, fill: "#1f5f4a", "fill-opacity": 0.85, stroke: "#fffdf8", "stroke-width": 2 }, svg);
+      const hit = el("circle", { cx: X(px), cy: Y(ox), r: Math.max(r, 14), fill: "transparent", style: "cursor:pointer" }, svg);
+      hit.addEventListener("mouseenter", () => { c.setAttribute("fill-opacity", 1); tipAt(tip, svg, X(px), Y(ox), b.n + " predictions &middot; forecast " + (px * 100).toFixed(1) + "% &middot; happened " + (ox * 100).toFixed(1) + "%"); });
+      hit.addEventListener("mouseleave", () => { c.setAttribute("fill-opacity", 0.85); tip.style.opacity = 0; });
+    });
+  }
+
+  // Precomputed offline: 30,000 simulations per setting (see calibration/score.js).
+  const CURVE = [[0.5,0.09247],[0.6,0.08831],[0.7,0.08472],[0.8,0.08165],[0.9,0.07896],[1,0.07641],[1.1,0.07444],[1.2,0.07262],[1.3,0.0713],[1.4,0.07003],[1.5,0.06873],[1.6,0.06762],[1.7,0.06679],[1.8,0.06589],[1.9,0.0654],[2,0.06485],[2.1,0.06434],[2.2,0.06389],[2.3,0.06384],[2.4,0.06347],[2.5,0.06345],[2.6,0.06352],[2.7,0.06344],[2.8,0.06348],[2.9,0.0637],[3,0.06381]];
+  function renderCurve() {
+    const svg = $("curve"), tip = $("curvetip");
+    const X = (v) => 62 + (v - 0.5) / 2.5 * 358, Y = (v) => 300 - (v - 0.06) / 0.035 * 280;
+    frame(svg, "Confidence (rating gap multiplier)", "Brier score", [0.5, 1, 1.5, 2, 2.5, 3], [0.06, 0.07, 0.08, 0.09], X, Y, (v) => v + "×", (v) => v.toFixed(2));
+    el("path", { d: CURVE.map((p, i) => (i ? "L" : "M") + X(p[0]) + "," + Y(p[1])).join(""), fill: "none", stroke: "#1f5f4a", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+    const mk = (v, label, anchor) => {
+      const p = CURVE.find((c) => Math.abs(c[0] - v) < 0.01);
+      el("circle", { cx: X(p[0]), cy: Y(p[1]), r: 5, fill: "#1f5f4a", stroke: "#fffdf8", "stroke-width": 2 }, svg);
+      const tx = el("text", { x: X(p[0]) + (anchor === "start" ? 9 : 0), y: Y(p[1]) - 12, "text-anchor": anchor, "font-size": 11.5, fill: "#14202e" }, svg); tx.textContent = label;
+    };
+    mk(1, "Market (1.0×)", "start"); mk(2.4, "Best fit (~2.4×)", "middle");
+    const cur = el("line", { x1: X(temp), x2: X(temp), y1: Y(0.06), y2: Y(0.095), stroke: "#b3892f", "stroke-width": 1.5, "stroke-dasharray": "3 3" }, svg);
+    const ov = el("rect", { x: X(0.5), y: Y(0.095), width: X(3) - X(0.5), height: Y(0.06) - Y(0.095), fill: "transparent" }, svg);
+    const dot = el("circle", { r: 5, fill: "#14202e", opacity: 0 }, svg);
+    ov.addEventListener("mousemove", (e) => {
+      const b = svg.getBoundingClientRect(), x = (e.clientX - b.left) * 440 / b.width;
+      let best = CURVE[0]; CURVE.forEach((c) => { if (Math.abs(X(c[0]) - x) < Math.abs(X(best[0]) - x)) best = c; });
+      dot.setAttribute("cx", X(best[0])); dot.setAttribute("cy", Y(best[1])); dot.setAttribute("opacity", 1);
+      tipAt(tip, svg, X(best[0]), Y(best[1]), best[0].toFixed(1) + "× &middot; Brier " + best[1].toFixed(4));
+    });
+    ov.addEventListener("mouseleave", () => { dot.setAttribute("opacity", 0); tip.style.opacity = 0; });
+  }
+
+  // Exact knockout win probability under the Poisson model: 90 minutes, then extra time, then a coin flip.
+  function poisPmf(l) { const a = []; let p = Math.exp(-l); for (let k = 0; k < 15; k++) { a.push(p); p *= l / (k + 1); } return a; }
+  function wdl(la, lb) {
+    const A = poisPmf(la), B = poisPmf(lb); let w = 0, d = 0;
+    for (let i = 0; i < 15; i++) for (let j = 0; j < 15; j++) { const q = A[i] * B[j]; if (i > j) w += q; else if (i === j) d += q; }
+    return [w, d];
+  }
+  function koWin(a, b) {
+    const mu = Math.log(1.3), g = (R[a] - R[b]) * temp / 2;
+    const la = Math.exp(mu + g), lb = Math.exp(mu - g);
+    const [w, d] = wdl(la, lb), [we, de] = wdl(la / 3, lb / 3);
+    return w + d * (we + de * 0.5);
+  }
+
+  function renderBracket() {
+    const box = $("bracket");
+    box.innerHTML = KO.map((round, ri) => {
+      const matches = round.map(([a, b, sc, w]) => {
+        const loser = w === a ? b : a, q = koWin(w, loser);
+        const row = (t) => "<div class='tm'><span class='" + (t === w ? "w" : "l") + "'>" + t + "</span>" + (t === a ? "<span class='sc'>" + sc + "</span>" : "") + "</div>";
+        return "<div class='match" + (q < 0.45 ? " upset" : "") + "'>" + row(a) + row(b) + "<div class='pr'>" + w + " win prob: " + pct(q) + "</div></div>";
+      }).join("");
+      return "<div class='round'><h4>" + KO_NAMES[ri] + "</h4><div class='col'>" + matches + "</div></div>";
+    }).join("");
+  }
+
+  function renderSurprises() {
+    const names = ["advanced from the group", "reached the Round of 16", "reached the quarterfinals", "reached the semifinals", "reached the final", "won the World Cup"];
+    const miss = ["failed to advance from the group", "lost in the Round of 32", "lost in the Round of 16", "lost in the quarterfinals", "lost in the semifinals", "lost the final"];
+    const ev = [];
+    teams.forEach((t) => {
+      for (let k = 0; k < 6; k++) {
+        const o = actual[t][k], q = probs[t].reach[k];
+        if (o) ev.push({ txt: t + " " + names[k], q });
+        else if (k === 0 || actual[t][k - 1]) ev.push({ txt: t + " " + miss[k], q: 1 - q });
+      }
+    });
+    ev.sort((a, b) => a.q - b.q);
+    $("surprises").innerHTML = ev.slice(0, 10).map((e) => "<li><span>" + e.txt + "</span><span class='pct'>" + pct(e.q) + "</span></li>").join("");
+  }
+
+  function playOne() {
+    const rng = S.makeRng((Math.random() * 1e9) | 0);
+    const { reach } = S.simulateOnce(R, temp, rng);
+    const at = (k) => teams.filter((t) => reach[t] === k);
+    const champ = at(6)[0], runner = at(5)[0], semis = at(4);
+    const box = $("onebox"); box.style.display = "block";
+    box.innerHTML = "<b>One simulated tournament:</b> " + champ + " beat " + runner + " in the final. Semifinal losers: " + semis.join(" and ") + ". Real champion Spain went out at the " +
+      ["group stage", "Round of 32", "Round of 16", "quarterfinals", "semifinals", "final", ""][reach["Spain"]] + (reach["Spain"] === 6 ? "... no, they won this one too." : ".");
+  }
+
+  $("temp").addEventListener("input", (e) => { temp = +e.target.value; $("tempv").textContent = temp.toFixed(1) + "×"; });
+  $("temp").addEventListener("change", run);
+  $("run").addEventListener("click", run);
+  $("one").addEventListener("click", playOne);
+  document.querySelectorAll("#tbl th").forEach((th) => th.addEventListener("click", () => {
+    const k = th.dataset.k;
+    if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = k === "name" || k === "odds" ? 1 : -1; }
+    renderTable();
+  }));
+  run();
+})();
+</script>
+</body>
+</html>

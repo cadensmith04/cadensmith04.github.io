@@ -1,0 +1,242 @@
+{
+ "Spain": {
+  "rating": 0.8873,
+  "odds": 450,
+  "market": 0.14799
+ },
+ "France": {
+  "rating": 0.8598,
+  "odds": 470,
+  "market": 0.1428
+ },
+ "England": {
+  "rating": 0.7693,
+  "odds": 650,
+  "market": 0.10853
+ },
+ "Brazil": {
+  "rating": 0.7314,
+  "odds": 850,
+  "market": 0.08568
+ },
+ "Portugal": {
+  "rating": 0.66,
+  "odds": 900,
+  "market": 0.08139
+ },
+ "Argentina": {
+  "rating": 0.6712,
+  "odds": 950,
+  "market": 0.07752
+ },
+ "Germany": {
+  "rating": 0.5578,
+  "odds": 1400,
+  "market": 0.05426
+ },
+ "Netherlands": {
+  "rating": 0.4955,
+  "odds": 1700,
+  "market": 0.04522
+ },
+ "Belgium": {
+  "rating": 0.4128,
+  "odds": 2200,
+  "market": 0.03539
+ },
+ "Norway": {
+  "rating": 0.3345,
+  "odds": 3300,
+  "market": 0.02394
+ },
+ "Japan": {
+  "rating": 0.3262,
+  "odds": 3500,
+  "market": 0.02261
+ },
+ "Colombia": {
+  "rating": 0.257,
+  "odds": 4000,
+  "market": 0.01985
+ },
+ "USA": {
+  "rating": 0.1705,
+  "odds": 5000,
+  "market": 0.01596
+ },
+ "Morocco": {
+  "rating": 0.2245,
+  "odds": 5500,
+  "market": 0.01453
+ },
+ "Mexico": {
+  "rating": 0.1752,
+  "odds": 5500,
+  "market": 0.01453
+ },
+ "Uruguay": {
+  "rating": 0.2106,
+  "odds": 5500,
+  "market": 0.01453
+ },
+ "Switzerland": {
+  "rating": 0.129,
+  "odds": 7500,
+  "market": 0.01071
+ },
+ "Turkiye": {
+  "rating": 0.084,
+  "odds": 8000,
+  "market": 0.01005
+ },
+ "Croatia": {
+  "rating": 0.1103,
+  "odds": 8000,
+  "market": 0.01005
+ },
+ "Ecuador": {
+  "rating": 0.1033,
+  "odds": 8000,
+  "market": 0.01005
+ },
+ "Austria": {
+  "rating": 0.0455,
+  "odds": 10000,
+  "market": 0.00806
+ },
+ "Senegal": {
+  "rating": 0.065,
+  "odds": 15000,
+  "market": 0.00539
+ },
+ "Canada": {
+  "rating": -0.0947,
+  "odds": 17500,
+  "market": 0.00462
+ },
+ "Sweden": {
+  "rating": 0,
+  "odds": 17500,
+  "market": 0.00462
+ },
+ "Scotland": {
+  "rating": -0.0572,
+  "odds": 17500,
+  "market": 0.00462
+ },
+ "Ivory Coast": {
+  "rating": -0.0443,
+  "odds": 20000,
+  "market": 0.00405
+ },
+ "Paraguay": {
+  "rating": 0.0022,
+  "odds": 20000,
+  "market": 0.00405
+ },
+ "Algeria": {
+  "rating": -0.1044,
+  "odds": 25000,
+  "market": 0.00324
+ },
+ "Egypt": {
+  "rating": -0.0555,
+  "odds": 40000,
+  "market": 0.00203
+ },
+ "Ghana": {
+  "rating": -0.2724,
+  "odds": 40000,
+  "market": 0.00203
+ },
+ "South Korea": {
+  "rating": -0.3065,
+  "odds": 40000,
+  "market": 0.00203
+ },
+ "Czechia": {
+  "rating": -0.2556,
+  "odds": 50000,
+  "market": 0.00162
+ },
+ "Iran": {
+  "rating": -0.3771,
+  "odds": 50000,
+  "market": 0.00162
+ },
+ "Bosnia and Herzegovina": {
+  "rating": -0.1006,
+  "odds": 50000,
+  "market": 0.00162
+ },
+ "Tunisia": {
+  "rating": -0.3566,
+  "odds": 150000,
+  "market": 0.00054
+ },
+ "Cape Verde": {
+  "rating": -0.5299,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Uzbekistan": {
+  "rating": -0.5179,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Haiti": {
+  "rating": -0.4739,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Panama": {
+  "rating": -0.5158,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Curacao": {
+  "rating": -0.4644,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Qatar": {
+  "rating": -0.5286,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Saudi Arabia": {
+  "rating": -0.5253,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "New Zealand": {
+  "rating": -0.4354,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Australia": {
+  "rating": -0.4126,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "DR Congo": {
+  "rating": -0.4439,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Iraq": {
+  "rating": -0.4712,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "Jordan": {
+  "rating": -0.4035,
+  "odds": 250000,
+  "market": 0.00033
+ },
+ "South Africa": {
+  "rating": -0.5356,
+  "odds": 250000,
+  "market": 0.00033
+ }
+}

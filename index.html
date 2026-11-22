@@ -87,7 +87,11 @@
   .status { font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
   .status.live { color: var(--accent); }
   .status.wip { color: var(--gold); }
-  .card-links { display: flex; gap: 16px; font-size: 14.5px; font-weight: 500; }
+  .card-links { display: flex; gap: 16px; font-size: 14.5px; font-weight: 500; color: var(--accent); }
+  .card.linked { position: relative; border-color: #c9d9d1; }
+  .card.linked h3 a { color: var(--ink); }
+  .card a.stretch::after { content: ""; position: absolute; inset: 0; }
+  .card.linked:hover h3 a { text-decoration: underline; }
 
   .row { display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 22px 0; border-top: 1px solid var(--line); }
   .row:first-of-type { border-top: none; padding-top: 0; }
@@ -145,6 +149,14 @@
     <div class="section-head"><h2>Projects</h2><span class="num">01</span></div>
     <div class="grid">
 
+      <div class="card linked">
+        <span class="status live">Live demo</span>
+        <h3><a class="stretch" href="world-cup/">Did the Betting Market See Spain Coming?</a></h3>
+        <p>Backed out team strength ratings from 2026 World Cup title odds, ran a Monte Carlo simulation of the full 48 team format, and scored the forecast against the real results.</p>
+        <div class="tags"><span class="tag">Monte Carlo</span><span class="tag">Calibration</span><span class="tag">JavaScript</span></div>
+        <div class="card-links"><span>View project &rarr;</span></div>
+      </div>
+
       <div class="card">
         <span class="status wip">In progress</span>
         <h3>Options Pricer and Greeks Explorer</h3>
@@ -159,12 +171,6 @@
         <div class="tags"><span class="tag">Risk</span><span class="tag">Monte Carlo</span><span class="tag">Backtesting</span></div>
       </div>
 
-      <div class="card">
-        <span class="status live">Complete</span>
-        <h3>2026 World Cup Bracket and Odds Simulator</h3>
-        <p>Monte Carlo tournament simulator using real match data, sportsbook outright odds, and the official knockout bracket structure.</p>
-        <div class="tags"><span class="tag">Simulation</span><span class="tag">Probability</span><span class="tag">React</span></div>
-      </div>
 
       <div class="card">
         <span class="status live">Complete</span>
