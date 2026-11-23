@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelly Bankroll Lab | Caden Smith</title>
+<meta name="description" content="Monte Carlo bet sizing for the bettor and the sportsbook, all in the browser.">
+<meta property="og:title" content="Kelly Bankroll Lab | Caden Smith">
+<meta property="og:description" content="Monte Carlo bet sizing for the bettor and the sportsbook, all in the browser.">
+<meta property="og:url" content="https://cadensmith04.github.io/kelly-bankroll-lab/">
+<meta property="og:type" content="article">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500&display=swap" rel="stylesheet">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#0c4a35;
+  --felt-deep:#04221a;
+  --panel:#03150f;
+  --ink:#eafff4;
+  --gain:#3dff8f;
+  --gold:#f7c948;
+  --display:'Fredoka',system-ui,sans-serif;
+  --body:'DM Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark;-webkit-text-size-adjust:100%;scroll-padding-top:56px}
+body{margin:0;color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;background-color:var(--felt-deep);
+  background-image:radial-gradient(ellipse 120% 70% at 50% 0%,rgba(30,140,95,.55) 0%,rgba(12,74,53,0) 60%),repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.012) 0 2px,rgba(0,0,0,.02) 2px 4px),linear-gradient(180deg,var(--felt) 0%,var(--felt-deep) 70%);
+  background-attachment:fixed;overflow-x:hidden}
+.mut{color:#8fc2ab}
+td,th,.mono,input,select,.kpi b,.stat b,.status{font-variant-numeric:tabular-nums}
+a{color:var(--gold)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,canvas:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:.2px;margin:0}
+h1{font-size:clamp(2.2rem,6vw,4rem);line-height:1.02}
+h1 .glow{color:var(--gain);text-shadow:0 0 24px rgba(61,255,143,.45)}
+h2{font-size:clamp(1.45rem,3.4vw,2.1rem);line-height:1.15}
+p{margin:.4em 0 .8em}
+nav.top{position:sticky;top:0;z-index:20;background:rgba(3,21,15,.92);backdrop-filter:blur(6px);border-bottom:1px solid rgba(61,255,143,.18)}
+nav.top .wrap{display:flex;gap:4px;align-items:center;overflow-x:auto;white-space:nowrap;scrollbar-width:none;padding-top:7px;padding-bottom:7px}
+nav.top .wrap::-webkit-scrollbar{display:none}
+nav.top a{color:#cfeee0;text-decoration:none;font-size:.8rem;padding:4px 10px;border-radius:999px;font-family:var(--mono)}
+nav.top a:hover{background:rgba(247,201,72,.15);color:var(--gold)}
+nav.top .brand{font-family:var(--display);font-weight:600;color:var(--gain);font-size:.95rem;margin-right:6px}
+header.hero{padding:26px 0 10px}
+.eyebrow{font-family:var(--mono);font-size:.78rem;color:var(--gain);letter-spacing:.12em;text-transform:uppercase}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:22px;align-items:start;margin-top:14px}
+.hero p.lede{font-size:1.07rem;max-width:34em}
+.chips{display:flex;flex-wrap:wrap;gap:10px 14px;margin:12px 0 6px}
+.chiplab{display:flex;align-items:center;gap:7px;font-size:.86rem}
+.chip{width:26px;height:26px;border-radius:50%;flex:none;position:relative;box-shadow:0 2px 0 rgba(0,0,0,.45),inset 0 0 0 3px rgba(0,0,0,.18)}
+.chip::after{content:"";position:absolute;inset:3px;border-radius:50%;border:3px dashed rgba(255,255,255,.85)}
+.chip.sm{width:16px;height:16px}.chip.sm::after{inset:2px;border-width:2px}
+.chips.bounce .chip{animation:hop .5s cubic-bezier(.3,1.6,.5,1) both}
+.chips.bounce .chiplab:nth-child(2) .chip{animation-delay:.05s}.chips.bounce .chiplab:nth-child(3) .chip{animation-delay:.1s}
+.chips.bounce .chiplab:nth-child(4) .chip{animation-delay:.15s}.chips.bounce .chiplab:nth-child(5) .chip{animation-delay:.2s}.chips.bounce .chiplab:nth-child(6) .chip{animation-delay:.25s}
+@keyframes hop{0%{transform:translateY(0)}40%{transform:translateY(-10px) rotate(40deg)}100%{transform:translateY(0) rotate(0)}}
+.term{background:rgba(3,21,15,.9);border:1px solid rgba(61,255,143,.22);border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.04);overflow:hidden;min-width:0}
+.term .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(61,255,143,.14);font-family:var(--mono);font-size:.74rem;color:#8fc2ab;background:rgba(0,0,0,.25)}
+.term .bar i{width:9px;height:9px;border-radius:50%;display:inline-block;background:#ff4d6d;flex:none}
+.term .bar i:nth-child(2){background:var(--gold)}.term .bar i:nth-child(3){background:var(--gain)}
+.term .bar span{margin-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.term .bd{padding:12px 14px}
+.plotwrap{position:relative}
+canvas.plot{display:block;width:100%;height:320px}
+canvas.plot.tall{height:360px}
+canvas.plot.short{height:250px}
+canvas.plot.sq{height:auto;aspect-ratio:1/1;max-height:520px}
+.tip{position:absolute;pointer-events:none;background:rgba(2,12,9,.95);border:1px solid rgba(247,201,72,.6);color:var(--ink);font-family:var(--mono);font-size:.75rem;padding:6px 8px;border-radius:8px;white-space:nowrap;display:none;z-index:3;line-height:1.4}
+.status{font-family:var(--mono);font-size:.78rem;color:var(--gain);min-height:1.3em}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 4px}
+.kpi{background:rgba(3,21,15,.8);border:1px solid rgba(61,255,143,.18);border-radius:12px;padding:10px 12px;min-width:0}
+.kpi small{display:block;font-size:.74rem;color:#8fc2ab;line-height:1.3}
+.kpi b{display:block;font-family:var(--mono);font-size:clamp(1.05rem,2.6vw,1.45rem);margin-top:4px}
+ul.desk{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+ul.desk li{padding-left:26px;position:relative;font-size:.93rem}
+ul.desk li::before{content:"";position:absolute;left:4px;top:.45em;width:12px;height:12px;border-radius:50%;background:var(--gold);box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+ul.desk b{color:var(--gold)}
+.controls{margin:18px 0 8px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+button{font:inherit;cursor:pointer}
+.btn{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid rgba(234,255,244,.25);border-radius:999px;padding:7px 14px;font-size:.88rem;font-weight:500}
+.btn:hover{border-color:var(--gold)}
+.btn[aria-pressed="true"]{background:var(--gold);color:#1a1300;border-color:var(--gold)}
+.btn.go{background:var(--gain);color:#032014;border-color:var(--gain);font-weight:700}
+.btn.sm{padding:4px 10px;font-size:.8rem}
+.ctl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:#8fc2ab;min-width:0}
+label.f input,label.f select{background:#020d09;color:var(--ink);border:1px solid rgba(61,255,143,.28);border-radius:8px;padding:7px 9px;font-family:var(--mono);font-size:.92rem;width:100%;min-width:0}
+input[type=range]{accent-color:var(--gold);width:100%;padding:0!important;border:0!important;background:transparent!important}
+.derived{font-family:var(--mono);font-size:.82rem;margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px}
+.derived b{color:var(--gold);font-weight:600}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px;margin:0 8px 8px 0}
+.warn{color:#ff8fa3;font-family:var(--mono);font-size:.8rem}
+section.sec{padding:38px 0 6px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.sec-head .n{font-family:var(--mono);color:var(--gold);font-size:.9rem;border:1px solid rgba(247,201,72,.5);border-radius:6px;padding:1px 7px}
+.lede2{max-width:48em;color:#d5f5e5}
+.grid2{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;margin-top:12px}
+.grid2.one{grid-template-columns:minmax(0,1fr)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:10px}
+.take{margin-top:12px;padding:10px 14px;border-left:4px solid var(--gold);background:rgba(247,201,72,.08);border-radius:0 10px 10px 0;max-width:62em}
+.take b{color:var(--gold)}
+.big{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 10px}
+.big.auto{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.stat{background:rgba(255,255,255,.035);border-radius:10px;padding:8px 10px;min-width:0}
+.stat small{display:block;font-size:.72rem;color:#8fc2ab;line-height:1.25}
+.stat b{font-family:var(--mono);font-size:1.12rem;display:block}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tab{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:var(--ink);border:1px solid rgba(234,255,244,.2);border-radius:999px;padding:5px 11px;font-size:.82rem}
+.tab[aria-pressed="true"]{border-color:var(--gold);background:rgba(247,201,72,.16)}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.84rem}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid rgba(61,255,143,.1);white-space:nowrap}
+th{font-family:var(--body);font-weight:500;color:#8fc2ab;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em}
+td{font-family:var(--mono)}
+th:first-child,td:first-child{text-align:left}
+tr.sel td{background:rgba(247,201,72,.1)}
+td .nm{display:inline-flex;align-items:center;gap:7px;font-family:var(--body);font-weight:500}
+.pos{color:var(--gain)}.neg{color:#ff6b83}
+.legend{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;color:#8fc2ab;margin-top:8px;flex-wrap:wrap}
+.legend .grad{height:10px;flex:1 1 120px;border-radius:5px;min-width:100px}
+.legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;vertical-align:middle}
+.keys{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;margin-top:6px;color:#cfeee0}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+.keys .ln{width:18px;height:3px;border-radius:2px;display:inline-block}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.methods{columns:2 320px;column-gap:28px;font-size:.92rem;color:#d5f5e5}
+.methods p{break-inside:avoid;margin-top:0}
+footer{padding:36px 0 40px;font-size:.88rem;color:#8fc2ab;text-align:center}
+.subh{font-family:var(--mono);font-size:.74rem;color:#8fc2ab;margin:4px 0 4px}
+@media (max-width:900px){
+  .hero-grid,.grid2,.grid3{grid-template-columns:minmax(0,1fr)}
+  .race-panel{order:-1}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .wrap{padding:0 12px}
+  canvas.plot{height:250px}canvas.plot.tall{height:290px}canvas.plot.short{height:220px}
+  .big{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ctl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hm{display:none}
+  th,td{padding:6px 4px}
+  table{font-size:.74rem}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="cs-back" style="background:#0e1621;font:500 14px/1 'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;position:relative;z-index:60"><div style="max-width:1080px;margin:0 auto;padding:0 20px;height:40px;display:flex;align-items:center;justify-content:space-between;gap:16px"><a href="../" style="color:#fff;text-decoration:none">&larr; Caden Smith</a><a href="../#projects" style="color:#c3ccd6;text-decoration:none">All projects</a></div></div>
+
+<nav class="top" aria-label="Sections"><div class="wrap">
+  <a class="brand" href="#top">Kelly Lab</a>
+  <a href="#s1">Edge</a><a href="#s2">Paths</a><a href="#s3">Sizing</a><a href="#s4">Calibration</a><a href="#s5">Risk desk</a><a href="#s6">Slate</a><a href="#s7">Parlays</a><a href="#s8">CLV</a><a href="#s9">Methods</a>
+</div></nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow">Sports quant lab &middot; Monte Carlo in your browser</div>
+    <div class="hero-grid">
+      <div>
+        <h1>Kelly <span class="glow">Bankroll</span> Lab</h1>
+        <p class="lede">Two sides of the same math: how a bettor should size bets when they have an edge, and how a sportsbook defends against the bettors who size them right. Everything runs live in your browser.</p>
+        <div class="chips" id="chipRow" aria-label="Strategy legend"></div>
+        <div class="kpis" id="kpis"></div>
+        <ul class="desk" aria-label="What a trading desk takes from this">
+          <li><b>Calibration is money.</b> A 2 point overestimate at &minus;110 turns full Kelly into a 4x overbet.</li>
+          <li><b>Limits turn compounding into a line.</b> A capped sharp costs the book a fixed amount per bet, not a growing one.</li>
+          <li><b>The close is the scoreboard.</b> CLV proves an edge in far fewer bets than win and loss records can.</li>
+        </ul>
+      </div>
+      <div class="term race-panel">
+        <div class="bar"><i></i><i></i><i></i><span id="raceTitle">bankroll_race</span></div>
+        <div class="bd">
+          <div class="seg" role="group" aria-label="Which race to show" id="raceSeg">
+            <button class="btn sm" type="button" data-q="0" aria-pressed="false">Unlucky 10th</button>
+            <button class="btn sm" type="button" data-q="1" aria-pressed="true">Typical 50th</button>
+            <button class="btn sm" type="button" data-q="2" aria-pressed="false">Lucky 90th</button>
+          </div>
+          <canvas id="race" class="plot tall" role="img" aria-label="Animated bankroll race: six strategies betting the same sequence of games"></canvas>
+          <div class="subh" id="raceNote"></div>
+          <div class="row" style="justify-content:space-between;margin-top:6px">
+            <div class="status" id="status" aria-live="polite">Loading</div>
+            <button class="btn" id="reraceBtn" type="button">New seed</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="term controls" id="controls">
+      <div class="bar"><i></i><i></i><i></i><span>set_the_table &middot; these inputs drive sections 01 to 03 and 06 to 07</span></div>
+      <div class="bd">
+        <div class="presets" role="group" aria-label="Presets">
+          <button class="btn" type="button" data-preset="nfl" aria-pressed="true">Elite NFL side: 55% at &minus;110</button>
+          <button class="btn" type="button" data-preset="coin" aria-pressed="false">Coin flip: 55% at even money</button>
+          <button class="btn" type="button" data-preset="real" aria-pressed="false">Realistic NFL edge (assumption)</button>
+        </div>
+        <div class="ctl-grid">
+          <label class="f">Input as<select id="mode"><option value="p">Win chance</option><option value="e">Edge (EV per $1)</option></select></label>
+          <label class="f"><span id="pLab">Win chance %</span><input id="pIn" type="number" step="0.1" min="1" max="99" value="55"></label>
+          <label class="f">Odds (American)<input id="oddsIn" type="number" step="1" value="-110"></label>
+          <label class="f">Starting bankroll $<input id="bankIn" type="number" step="100" min="10" value="1000"></label>
+          <label class="f">Number of bets<input id="tIn" type="number" step="50" min="50" max="5000" value="1000"></label>
+          <label class="f">Paths<select id="nIn"><option>1000</option><option>5000</option><option selected>10000</option><option>20000</option></select></label>
+          <label class="f"><span>Fractional Kelly: <b class="mono" id="fracOut">0.50x</b></span><input id="fracIn" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
+          <label class="f">Flat stake % of start<input id="flatIn" type="number" step="0.5" min="0.1" max="20" value="2"></label>
+          <label class="f">Max bet $ (capped Kelly)<input id="capIn" type="number" step="10" min="1" value="150"></label>
+          <label class="f">Martingale base % (race only)<input id="martIn" type="number" step="0.1" min="0.1" max="10" value="1"></label>
+          <label class="f">Seed<input id="seedIn" type="number" step="1" value="7"></label>
+        </div>
+        <div class="derived" id="derived"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn go" id="runBtn" type="button">Run simulation</button>
+          <span class="warn" id="warn"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="sec" id="s1">
+  <div class="sec-head"><span class="n">01</span><h2>Your edge is smaller than you think</h2></div>
+  <p class="lede2">Kelly sizes the bet off the win chance you believe. Real bettors almost always believe a little too much, because models overfit and we bet the games where our numbers look best. Pick what you believe and what is actually true. Every cell is an exact binomial calculation, no simulation noise.</p>
+  <div class="grid2">
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>believed vs true win chance</span></div>
+      <div class="bd">
+        <div class="seg" role="group" aria-label="Bet size" id="hmMult">
+          <button class="btn" type="button" data-m="1" aria-pressed="true">Full Kelly</button>
+          <button class="btn" type="button" data-m="0.5" aria-pressed="false">Half</button>
+          <button class="btn" type="button" data-m="0.25" aria-pressed="false">Quarter</button>
+        </div>
+        <div class="seg" role="group" aria-label="Color by" id="hmMetric">
+          <button class="btn" type="button" data-k="med" aria-pressed="true">Median bankroll</button>
+          <button class="btn" type="button" data-k="up" aria-pressed="false">Chance you are up</button>
+        </div>
+        <div class="plotwrap"><canvas id="hm" class="plot sq" tabindex="0" role="img" aria-label="Heatmap of outcomes by believed and true win chance. Click or use arrow keys to pick a cell."></canvas><div class="tip" id="hmTip"></div></div>
+        <div class="legend" id="hmLegend"></div>
+      </div>
+    </div>
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>what_if &middot; click the map or drag these</span></div>
+      <div class="bd">
+        <div class="ctl-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <label class="f"><span>You believe: <b class="mono" id="belOut"></b></span><input id="belIn" type="range" step="0.001"></label>
+          <label class="f"><span>Truth: <b class="mono" id="truOut"></b></span><input id="truIn" type="range" step="0.001"></label>
+        </div>
+        <div class="big" id="hmBig"></div>
+        <div class="tbl"><table id="hmTable"></table></div>
+        <canvas id="hmLine" class="plot short" role="img" aria-label="Median bankroll versus true win chance for full, half and quarter Kelly"></canvas>
+        <div class="keys" id="hmKeys"></div>
+      </div>
+    </div>
+  </div>
+  <p class="take" id="s1take"></p>
+</section>
+
+<section class="sec" id="s2">
+  <div class="sec-head"><span class="n">02</span><h2>Every path, one chart</h2></div>
+  <p class="lede2">Bands show where the middle 50% and 90% of bettors sit after each bet. Thin lines are individual bettors. The teal chip is full Kelly with a hard max bet, the way a book limits a winner. Watch its top band flatten once the cap binds.</p>
+  <div class="tabs" id="tabs" role="group" aria-label="Focus strategy"></div>
+  <div class="grid2">
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span id="fanTitle">bankroll paths</span></div>
+      <div class="bd">
+        <div class="plotwrap"><canvas id="fan" class="plot tall" role="img" aria-label="Fan chart of bankroll paths"></canvas><div class="tip" id="fanTip"></div></div>
+        <div class="keys"><span><i class="ln" style="background:#fff"></i>Median</span><span><i class="ln" style="background:repeating-linear-gradient(90deg,#f7c948 0 4px,transparent 4px 7px)"></i>Mean</span><span><i class="ln" style="background:rgba(234,255,244,.35)"></i>Start</span></div>
+      </div>
+    </div>
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span id="histTitle">where the money ends up</span></div>
+      <div class="bd">
+        <canvas id="hist" class="plot tall" role="img" aria-label="Histogram of final bankrolls on a log scale"></canvas>
+        <div class="keys"><span><i class="ln" style="background:#fff"></i>Median</span><span><i class="ln" style="background:#f7c948"></i>Mean</span><span class="mut">Bins line up with the win count lattice, so no comb pattern.</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="take" id="s2take"></p>
+  <div class="term" style="margin-top:14px">
+    <div class="bar"><i></i><i></i><i></i><span>scorecard</span></div>
+    <div class="bd tbl"><table id="score"></table></div>
+  </div>
+</section>
+
+<section class="sec" id="s3">
+  <div class="sec-head"><span class="n">03</span><h2>How much to bet</h2></div>
+  <p class="lede2">Growth rises until you hit full Kelly, then falls just as fast. At about twice Kelly the typical bettor makes nothing at all. The line is the exact formula, the dots are simulated medians.</p>
+  <div class="grid2">
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>median bankroll vs bet size</span></div>
+      <div class="bd"><canvas id="grow" class="plot" role="img" aria-label="Median final bankroll versus Kelly multiple"></canvas>
+        <div class="keys"><span><i class="ln" style="background:var(--gain)"></i>Exact formula</span><span><i class="ln" style="background:#fff;height:8px;width:8px;border-radius:50%"></i>Simulated median</span></div></div>
+    </div>
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>drawdowns &middot; chance of ever falling X% from a peak</span></div>
+      <div class="bd"><canvas id="dd" class="plot" role="img" aria-label="Chance of a drawdown of at least X percent by strategy"></canvas><div class="keys" id="ddKeys"></div></div>
+    </div>
+  </div>
+  <p class="take" id="s3take"></p>
+</section>
+
+<section class="sec" id="s4">
+  <div class="sec-head"><span class="n">04</span><h2>Calibration: when your model is overconfident</h2></div>
+  <p class="lede2">The market posts &minus;110 on both sides, treating every game as 50/50. Each game has a true win chance that differs from 50% by a few points. Your model sees that difference, but scaled by a calibration slope: above 1 means overconfident, so your model pushes probabilities too far from 50%. You bet whichever side your model likes, sized by Kelly on your model.</p>
+  <div class="term">
+    <div class="bar"><i></i><i></i><i></i><span>calibration_lab &middot; uses odds, bets and paths from the table above</span></div>
+    <div class="bd">
+      <div class="ctl-grid">
+        <label class="f"><span>Calibration slope: <b class="mono" id="cSOut"></b></span><input id="cS" type="range" min="0.6" max="2" step="0.05" value="1.3"></label>
+        <label class="f"><span>How far true games sit from 50%: <b class="mono" id="cTOut"></b></span><input id="cT" type="range" min="1" max="6" step="0.25" value="3"></label>
+        <label class="f"><span>Model noise: <b class="mono" id="cNOut"></b></span><input id="cN" type="range" min="0" max="4" step="0.25" value="0"></label>
+        <div class="row"><button class="btn go" id="cRun" type="button">Run bettors</button></div>
+      </div>
+      <div class="status" id="cStatus" aria-live="polite"></div>
+      <div class="grid3">
+        <div><div class="subh">Reliability: what your model says vs what happens</div><canvas id="cRel" class="plot" role="img" aria-label="Reliability diagram"></canvas></div>
+        <div><div class="subh">Kelly cost curve: median after the bets</div><canvas id="cCurve" class="plot" role="img" aria-label="Median bankroll versus Kelly multiple for your model and a calibrated model"></canvas>
+          <div class="keys"><span><i class="ln" style="background:var(--gain)"></i>Your model</span><span><i class="ln" style="background:rgba(234,255,244,.5)"></i>Calibrated model</span></div></div>
+        <div><div class="subh">Final bankrolls across bettors</div><canvas id="cHist" class="plot" role="img" aria-label="Distribution of final bankrolls"></canvas><div class="keys" id="cKeys"></div></div>
+      </div>
+      <div class="big auto" id="cBig" style="margin-top:10px"></div>
+      <div class="tbl"><table id="cTable"></table></div>
+    </div>
+  </div>
+  <p class="take" id="s4take"></p>
+</section>
+
+<section class="sec" id="s5">
+  <div class="sec-head"><span class="n">05</span><h2>You are the risk desk</h2></div>
+  <p class="lede2">Flip sides. You post a price, take action from a crowd of recreational bettors and a few sharps who bet Kelly. Recs lose the hold. Sharps have a real edge, their stakes compound as they win, and each sharp bet moves your line. Your tools are a max bet and a limit rule based on closing line value.</p>
+  <div class="term">
+    <div class="bar"><i></i><i></i><i></i><span>book_sim &middot; your rules vs no limits, same random numbers</span></div>
+    <div class="bd">
+      <div class="ctl-grid">
+        <label class="f">Posted price, both sides<input id="bkA" type="number" step="1" value="-110"></label>
+        <label class="f">Games in a season<input id="bkG" type="number" step="50" min="50" max="2000" value="800"></label>
+        <label class="f">Seasons simulated<input id="bkS" type="number" step="50" min="50" max="2000" value="400"></label>
+        <label class="f">Rec bets per game<input id="bkNR" type="number" step="50" min="0" value="500"></label>
+        <label class="f">Avg rec stake $<input id="bkRM" type="number" step="5" min="1" value="50"></label>
+        <label class="f">Sharps<input id="bkM" type="number" step="1" min="0" max="200" value="25"></label>
+        <label class="f">Sharp win chance %<input id="bkP" type="number" step="0.1" value="55"></label>
+        <label class="f">Sharp bankroll $<input id="bkW" type="number" step="1000" min="100" value="25000"></label>
+        <label class="f">Sharp Kelly fraction<input id="bkK" type="number" step="0.05" min="0.05" max="1" value="0.5"></label>
+        <label class="f">Max bet $<input id="bkL" type="number" step="100" min="1" value="2500"></label>
+        <label class="f">Limit after n bets<input id="bkN" type="number" step="10" min="1" value="50"></label>
+        <label class="f">if avg CLV above %<input id="bkX" type="number" step="0.1" value="1"></label>
+        <label class="f">cut limit to $<input id="bkY" type="number" step="50" min="1" value="100"></label>
+        <label class="f">Line move, cents<input id="bkC" type="number" step="0.5" min="0" value="1"></label>
+        <label class="f">per $ of sharp money<input id="bkXm" type="number" step="500" min="1" value="5000"></label>
+        <label class="f">CLV noise per bet %<input id="bkSd" type="number" step="0.5" min="0" value="2.5"></label>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn go" id="bkRun" type="button">Run the season</button><span class="status" id="bkStatus" aria-live="polite"></span></div>
+      <div class="big auto" id="bkBig" style="margin-top:10px"></div>
+      <div class="grid3">
+        <div><div class="subh">Book P&amp;L through the season</div><canvas id="bkFan" class="plot" role="img" aria-label="Fan chart of cumulative book profit"></canvas>
+          <div class="keys"><span><i class="ln" style="background:var(--gold)"></i>Your rules, median and bands</span><span><i class="ln" style="background:#ff4d6d"></i>No limits, median</span></div></div>
+        <div><div class="subh">Where the season P&amp;L comes from (medians)</div><canvas id="bkSplit" class="plot" role="img" aria-label="Bar chart splitting book profit between recreational and sharp bettors"></canvas></div>
+        <div><div class="subh">One sharp's bankroll (median across seasons)</div><canvas id="bkSharp" class="plot" role="img" aria-label="Median sharp bankroll with and without limits"></canvas>
+          <div class="keys"><span><i class="ln" style="background:#ff4d6d"></i>No limits: compounds</span><span><i class="ln" style="background:var(--gold)"></i>Your rules: goes linear</span></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="take" id="s5take"></p>
+</section>
+
+<section class="sec" id="s6">
+  <div class="sec-head"><span class="n">06</span><h2>A correlated slate</h2></div>
+  <p class="lede2">Sunday has a dozen games kicking off together, so the stakes add up. If the games were independent, betting single game Kelly on each would be nearly right. They are not: weather, a shared model error, or same game legs tie them together. Slide correlation up and watch the right total exposure collapse.</p>
+  <div class="grid2">
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>simultaneous_kelly</span></div>
+      <div class="bd">
+        <div class="ctl-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <label class="f"><span>Games on the slate: <b class="mono" id="slOut">10</b></span><input id="slN" type="range" min="1" max="16" step="1" value="10"></label>
+          <label class="f"><span>Correlation between games: <b class="mono" id="slROut">0.20</b></span><input id="slR" type="range" min="0" max="0.8" step="0.05" value="0.2"></label>
+        </div>
+        <canvas id="slate" class="plot" role="img" aria-label="Median bankroll versus stake per game when betting a whole slate at once"></canvas>
+        <div class="keys"><span><i class="ln" style="background:var(--gain)"></i>With this correlation</span><span><i class="ln" style="background:rgba(234,255,244,.45)"></i>If independent</span></div>
+      </div>
+    </div>
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>readout</span></div>
+      <div class="bd"><div class="big" id="slBig"></div>
+        <div class="subh">Best total exposure vs correlation</div>
+        <canvas id="slExp" class="plot short" role="img" aria-label="Best total slate exposure as correlation rises"></canvas>
+        <p id="slText" style="margin:8px 0 0"></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="s7">
+  <div class="sec-head"><span class="n">07</span><h2>Parlays vs straight bets</h2></div>
+  <p class="lede2">A parlay multiplies whatever edge each leg has. For a bettor with an edge that sounds great until you size it. For a book facing a bettor with no edge, it multiplies the hold, which is why parlays are such a big profit line.</p>
+  <div class="grid2 one">
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>parlay_table</span></div>
+      <div class="bd tbl"><table id="parTable"></table></div>
+    </div>
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>left: EV per bet &middot; right: growth per game, vs straights</span></div>
+      <div class="bd"><canvas id="parChart" class="plot short" role="img" aria-label="Two panels: expected value per parlay and growth per game relative to straight bets"></canvas></div>
+    </div>
+  </div>
+  <p class="take" id="s7take"></p>
+</section>
+
+<section class="sec" id="s8">
+  <div class="sec-head"><span class="n">08</span><h2>CLV pricing tool</h2></div>
+  <p class="lede2">The closing line is the sharpest price the market makes. Remove the vig to get a fair probability, compare it with the price you got, and you have an edge estimate. How you remove the vig matters, and so does how many bets it takes to prove anything.</p>
+  <div class="term">
+    <div class="bar"><i></i><i></i><i></i><span>closing_line_value</span></div>
+    <div class="bd">
+      <div class="ctl-grid">
+        <label class="f">Your price<input id="clvBet" type="number" step="1" value="-110"></label>
+        <label class="f">Close, your side<input id="clvOwn" type="number" step="1" value="-125"></label>
+        <label class="f">Close, other side<input id="clvOth" type="number" step="1" value="105"></label>
+        <label class="f">CLV noise per bet, pts<input id="clvSd" type="number" step="0.5" min="0.1" value="2.5"></label>
+      </div>
+      <div class="seg" role="group" aria-label="Devig method" id="clvM" style="margin-top:10px">
+        <button class="btn sm" type="button" data-v="mult" aria-pressed="true">Multiplicative</button>
+        <button class="btn sm" type="button" data-v="add" aria-pressed="false">Additive</button>
+        <button class="btn sm" type="button" data-v="pow" aria-pressed="false">Power</button>
+        <button class="btn sm" type="button" data-v="shin" aria-pressed="false">Shin</button>
+      </div>
+      <div class="big auto" id="clvBig"></div>
+      <div class="tbl"><table id="clvTable"></table></div>
+      <p id="clvText" style="margin:10px 0 0"></p>
+      <div class="row" style="margin-top:10px"><button class="btn" id="clvUse" type="button">Use this fair chance as my edge above</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="s9">
+  <div class="sec-head"><span class="n">09</span><h2>Methods and caveats</h2></div>
+  <div class="methods">
+    <p><b>Kelly fraction.</b> With win chance p, net odds b (profit per $1) and q = 1 &minus; p, Kelly bets f* = (pb &minus; q) / b of the current bankroll. It maximizes expected log growth per bet, g(f) = p ln(1 + bf) + q ln(1 &minus; f). After T bets the median bankroll is about e<sup>Tg</sup>.</p>
+    <p><b>Main simulation.</b> Each path draws one win and loss sequence from a seeded generator, and every strategy bets that same sequence, so differences come from sizing and not luck. Paths run in a Web Worker. Busted means below 1% of the starting bankroll. The race shows the path where full Kelly finishes at the chosen percentile.</p>
+    <p><b>Strategies.</b> Full, fractional and 2x Kelly bet a share of current bankroll. Capped Kelly bets full Kelly up to a dollar max. Flat bets a fixed dollar amount. Martingale, in the race only, doubles after each loss and resets after a win.</p>
+    <p><b>Exact sections.</b> The heatmap, growth curve and histogram bins rely on the fact that with a fixed fraction, final wealth depends only on the number of wins, which is binomial. The slate uses a one factor Gaussian copula: each game wins when a correlated normal falls below its threshold, integrated on a grid.</p>
+    <p><b>Calibration lab.</b> True game logits are normal around 0 (50%). Your model logit is slope times the true logit plus optional noise. Brier score and log loss are averaged over 20,000 games. With noise, picking the games your model likes most creates the winner's curse: noise becomes bias.</p>
+    <p><b>Risk desk.</b> Rec handle and P&amp;L per game use a normal approximation to the sum of lognormal stakes, with recs losing at the posted price on fair 50/50 games. Sharps bet in rotating order and each sees the line moved by earlier sharp money. Observed CLV is the sharp's true edge at their price plus noise. Both scenarios use identical random draws.</p>
+    <p><b>Caveats.</b> Real bets are not independent coin flips, edges drift, and real books also move lines on rec flow. Parlay EV here assumes the book pays the posted prices multiplied together and legs are independent; same game parlays are correlated and books price them with that correlation, usually worse for the bettor. The realistic NFL preset (about 1.5% edge) is an assumption, not a measured result.</p>
+    <p><b>Devig methods.</b> Multiplicative scales both implied probabilities by their sum. Additive subtracts half the overround from each. Power raises both to the exponent that makes them sum to 1. Shin assumes a share of insider money and shifts more of the margin onto the longshot.</p>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap">Built by <a href="https://cadensmith04.github.io">Caden Smith</a> &middot; <a href="https://github.com/cadensmith04/cadensmith04.github.io">Source on GitHub</a></div></footer>
+
+<script>
+/* ===== shared math (also shipped to the worker) ===== */
+function mulberry(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
+function seedFor(seed,i){var h=Math.imul(seed|0,2654435761)^Math.imul(i+1,2246822519);h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return (h^(h>>>16))>>>0;}
+function decOf(a){a=+a;if(Math.abs(a)<100)return NaN;return a>0?1+a/100:1+100/(-a);}
+function amMove(a,c){var r=a-c;if(a>0&&r<100)r=-100-(100-r);return r;}
+function statsOf(term){var N=term.length,s=Float64Array.from(term).sort(),m=0,up=0,dn=0,bust=0;for(var i=0;i<N;i++){m+=term[i];if(term[i]>1+1e-12)up++;else if(term[i]<1-1e-12)dn++;if(term[i]<0.01)bust++;}
+  function q(x){return s[Math.min(N-1,Math.max(0,Math.round(x*(N-1))))];}
+  return {median:q(.5),mean:m/N,p5:q(.05),p95:q(.95),p995:q(.995),up:up/N,down:dn/N,flat:(N-up-dn)/N,bust:bust/N};}
+function quantArr(src,S,K,qs){var out=qs.map(function(){return new Float64Array(K+1);}),tmp=new Float32Array(S);
+  for(var k=0;k<=K;k++){tmp.set(src.subarray(k*S,(k+1)*S));tmp.sort();for(var j=0;j<qs.length;j++)out[j][k]=tmp[Math.round(qs[j]*(S-1))];}return out;}
+function simMain(j,prog){
+  var p=j.p,b=j.b,T=j.T,N=j.N,strats=j.strats,S=strats.length,K=Math.min(T,100);
+  var cpOf=new Int16Array(T+1).fill(-1),cpT=[];for(var k=0;k<=K;k++){var tt=Math.round(k*T/K);cpOf[tt]=k;cpT.push(tt);}
+  var cp=[],term=[],mdd=[],d50=new Float64Array(S),s,i,t;
+  for(s=0;s<S;s++){cp.push(new Float32Array((K+1)*N));term.push(new Float64Array(N));mdd.push(new Float32Array(N));}
+  var out=new Uint8Array(T);
+  for(i=0;i<N;i++){
+    var r=mulberry(seedFor(j.seed,i));for(t=0;t<T;t++)out[t]=r()<p?1:0;
+    for(s=0;s<S;s++){
+      var st=strats[s],ty=st.type,f=st.f||0,cap=st.cap||Infinity,base=st.stake||0,stake=base,w=1,peak=1,md=0,hit=0,c=cp[s];c[i]=1;
+      for(t=0;t<T;t++){
+        if(w>1e-9){var bet;if(ty===0)bet=f*w;else if(ty===3){bet=f*w;if(bet>cap)bet=cap;}else bet=stake<w?stake:w;
+          if(out[t]){w+=bet*b;stake=base;}else{w-=bet;if(ty===2)stake*=2;}
+          if(w<1e-12)w=0;}
+        if(w>peak)peak=w;else{var d=1-w/peak;if(d>md)md=d;}
+        if(w<=0.5)hit=1;
+        var kk=cpOf[t+1];if(kk>=0)c[kk*N+i]=w;
+      }
+      term[s][i]=w;mdd[s][i]=md;d50[s]+=hit;
+    }
+    if(prog&&(i&1023)===1023)prog((i+1)/N);
+  }
+  var res=[],NS=Math.min(N,30);
+  for(s=0;s<S;s++){
+    var stt=statsOf(term[s]);
+    var qq=quantArr(cp[s],N,K,[.05,.25,.5,.75,.95]),mean=new Float64Array(K+1);
+    for(k=0;k<=K;k++){var mm=0,off=k*N;for(i=0;i<N;i++)mm+=cp[s][off+i];mean[k]=mm/N;}
+    var samples=[];for(i=0;i<NS;i++){var a=new Float64Array(K+1);for(k=0;k<=K;k++)a[k]=cp[s][k*N+i];samples.push(a);}
+    var sm=Float32Array.from(mdd[s]).sort(),dd=[],avgM=0;for(i=0;i<N;i++)avgM+=mdd[s][i];
+    for(var x=0;x<=100;x+=2){var th=x/100,lo2=0,hi2=N;while(lo2<hi2){var mid=(lo2+hi2)>>1;if(sm[mid]<th)lo2=mid+1;else hi2=mid;}dd.push((N-lo2)/N);}
+    stt.d50=d50[s]/N;stt.avgMdd=avgM/N;stt.medLogG=stt.median>0?Math.log(stt.median)/T:-Infinity;
+    res.push({stats:stt,q5:qq[0],q25:qq[1],q50:qq[2],q75:qq[3],q95:qq[4],mean:mean,samples:samples,dd:dd,term:term[s]});
+  }
+  var sorted0=Float64Array.from(term[0]).sort(),race=[];
+  [.1,.5,.9].forEach(function(q){var target=sorted0[Math.round(q*(N-1))],best=0,bd=Infinity;for(var ii=0;ii<N;ii++){var dv=Math.abs(term[0][ii]-target);if(dv<bd){bd=dv;best=ii;if(dv===0)break;}}
+    race.push({q:q,i:best,paths:strats.map(function(_,ss){var a=new Float64Array(K+1);for(var kk=0;kk<=K;kk++)a[kk]=cp[ss][kk*N+best];return a;})});});
+  var dots=[];
+  if(j.fStar>0&&j.dots){var N2=Math.max(300,Math.min(2000,Math.floor(2.6e7/(T*j.dots.length)))),tv=new Float64Array(N2);
+    for(var di=0;di<j.dots.length;di++){var fc=Math.min(1,j.dots[di]*j.fStar);
+      for(i=0;i<N2;i++){var r2=mulberry(seedFor(j.seed+7919*(di+1),i)),w2=1;for(t=0;t<T;t++){if(r2()<p)w2+=fc*w2*b;else w2-=fc*w2;}tv[i]=w2;}
+      var srt=Float64Array.from(tv).sort();dots.push([j.dots[di],srt[N2>>1]]);}}
+  return {K:K,cpT:cpT,res:res,race:race,dots:dots};
+}
+function simCal(j){
+  var b=j.b,T=j.T,N=j.N,s=j.s,tau=j.tau,nu=j.nu,BE=1/(1+b),S=4,mults=[0,1,.5,.25],i,t,q;
+  var term=[],d50=new Float64Array(S),taken=new Float64Array(S);for(q=0;q<S;q++)term.push(new Float64Array(N));
+  var W=new Float64Array(S),hit=new Uint8Array(S);
+  for(i=0;i<N;i++){var r=mulberry(seedFor(j.seed+31337,i));W.fill(1);hit.fill(0);
+    for(t=0;t<T;t++){
+      var u1=Math.max(1e-12,r()),u2=r(),rad=Math.sqrt(-2*Math.log(u1)),z1=rad*Math.cos(6.283185307179586*u2),z2=rad*Math.sin(6.283185307179586*u2),u=r();
+      var L=tau*z1,pt=1/(1+Math.exp(-L)),m=1/(1+Math.exp(-(s*L+nu*z2))),winA=u<pt;
+      var pm=0,pw=0,mw=false;if(m>BE){pm=m;mw=winA;}else if(1-m>BE){pm=1-m;mw=!winA;}
+      var fK=pm>0?Math.max(0,(pm*b-(1-pm))/b):0;
+      var fo=0,ow=false;if(pt>BE){fo=(pt*b-(1-pt))/b;ow=winA;}else if(1-pt>BE){fo=((1-pt)*b-pt)/b;ow=!winA;}
+      for(q=0;q<S;q++){var f=q===0?fo:Math.min(1,mults[q]*fK),win=q===0?ow:mw;if(f>0){taken[q]++;if(win)W[q]+=f*W[q]*b;else W[q]-=f*W[q];if(W[q]<=.5)hit[q]=1;}}
+    }
+    for(q=0;q<S;q++){term[q][i]=W[q];d50[q]+=hit[q];}
+  }
+  var res=[],gmax=1;for(q=0;q<S;q++){var st=statsOf(term[q]);st.d50=d50[q]/N;st.taken=taken[q]/(N*T);gmax=Math.max(gmax,st.p995);res.push({stats:st,term:term[q]});}
+  return {res:res};
+}
+function simBook(j,prog){
+  var G=j.G,S=j.S,M=j.M,p=j.p,K=Math.min(G,100),A0=j.A0,D0=decOf(A0),k,s,g,q,i;
+  var cpOf=new Int16Array(G+1).fill(-1),cpT=[];for(k=0;k<=K;k++){var tt=Math.round(k*G/K);cpOf[tt]=k;cpT.push(tt);}
+  var cumA=new Float32Array((K+1)*S),cumB=new Float32Array((K+1)*S),bankA=new Float32Array((K+1)*S),bankB=new Float32Array((K+1)*S);
+  var recT=new Float64Array(S),shA=new Float64Array(S),shB=new Float64Array(S),totA=new Float64Array(S),totB=new Float64Array(S),limShare=new Float64Array(S);
+  var hA=0,hB=0,pA=0,pB=0;
+  var hR=j.nRec*j.recMean,recMu=hR*(1-0.5*D0),recSd=Math.sqrt(j.nRec*j.recMean*j.recMean*Math.exp(j.recSig*j.recSig))*0.5*D0;
+  var WA=new Float64Array(M),WB=new Float64Array(M),lim=new Float64Array(M),cnt=new Float64Array(M),clv=new Float64Array(M);
+  for(s=0;s<S;s++){
+    var r=mulberry(seedFor(j.seed+555,s));WA.fill(j.bank);WB.fill(j.bank);lim.fill(j.L);cnt.fill(0);clv.fill(0);
+    var pnlA=0,pnlB=0,nLim=0;
+    for(g=0;g<G;g++){
+      var u=r(),u1=Math.max(1e-12,r()),u2=r(),z=Math.sqrt(-2*Math.log(u1))*Math.cos(6.283185307179586*u2);
+      var rec=recMu+recSd*z;pnlA+=rec;pnlB+=rec;recT[s]+=rec;hA+=hR;hB+=hR;
+      var win=u<p,aA=A0,aB=A0,start=M?g%M:0;
+      for(q=0;q<M;q++){i=(start+q)%M;
+        var v1=Math.max(1e-12,r()),v2=r(),zc=Math.sqrt(-2*Math.log(v1))*Math.cos(6.283185307179586*v2);
+        var DA=decOf(aA),eA=p*DA-1;
+        if(eA>0){var st=Math.min(j.kf*eA/(DA-1)*WA[i],lim[i]);
+          if(st>=1){aA=amMove(aA,j.kc*st/j.X);hA+=st;var pl=win?-st*(DA-1):st;pnlA+=pl;shA[s]+=pl;WA[i]-=pl;
+            cnt[i]++;clv[i]+=eA+j.sd*zc;if(j.rule&&cnt[i]>=j.nL&&clv[i]/cnt[i]>j.th&&lim[i]>j.Y){lim[i]=j.Y;nLim++;}}}
+        var DB=decOf(aB),eB=p*DB-1;
+        if(eB>0){var sb=j.kf*eB/(DB-1)*WB[i];
+          if(sb>=1){aB=amMove(aB,j.kc*sb/j.X);hB+=sb;var plb=win?-sb*(DB-1):sb;pnlB+=plb;shB[s]+=plb;WB[i]-=plb;}}
+      }
+      var kk=cpOf[g+1];if(kk>=0){cumA[kk*S+s]=pnlA;cumB[kk*S+s]=pnlB;bankA[kk*S+s]=M?WA[0]:0;bankB[kk*S+s]=M?WB[0]:0;}
+    }
+    for(k=0;k<1;k++){bankA[s]=j.bank;bankB[s]=j.bank;}
+    totA[s]=pnlA;totB[s]=pnlB;pA+=pnlA;pB+=pnlB;limShare[s]=M?nLim/M:0;
+    if(prog&&(s&31)===31)prog((s+1)/S);
+  }
+  var qa=quantArr(cumA,S,K,[.05,.25,.5,.75,.95]),qb=quantArr(cumB,S,K,[.5]),ba=quantArr(bankA,S,K,[.5]),bb=quantArr(bankB,S,K,[.5]);
+  function med(a){var x=Float64Array.from(a).sort();return x[Math.floor(x.length/2)];}
+  function frac(a,f){var c=0;for(var ii=0;ii<a.length;ii++)if(f(a[ii]))c++;return c/a.length;}
+  var lm=0;for(s=0;s<S;s++)lm+=limShare[s];
+  return {K:K,cpT:cpT,qa:qa,qbMed:qb[0],bankA:ba[0],bankB:bb[0],recMed:med(recT),shAMed:med(shA),shBMed:med(shB),totAMed:med(totA),totBMed:med(totB),
+    holdA:pA/hA,holdB:pB/hB,lossA:frac(totA,function(v){return v<0;}),lossB:frac(totB,function(v){return v<0;}),limited:lm/S};
+}
+
+/* ===== main thread ===== */
+var $=function(id){return document.getElementById(id);};
+var RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var COL={ink:'#eafff4',muted:'#8fc2ab',gain:'#3dff8f',loss:'#ff4d6d',gold:'#f7c948',grid:'rgba(143,194,171,.13)'};
+var MONO="'JetBrains Mono',ui-monospace,monospace";
+var S={p:.55,odds:-110,bank:1000,T:1000,N:10000,frac:.5,flat:.02,cap:150,mart:.01,seed:7,mode:'p',focus:0,raceQ:1};
+var H={bel:.55,tru:.53,mult:1,metric:'med'};
+var MAIN=null,META=null,CAL=null,BOOK=null,jobId=0,lastJobs={};
+function amStr(D){if(!(D>1))return 'n/a';return D>=2?'+'+Math.round((D-1)*100):'−'+Math.round(100/(D-1));}
+function kelly(p,b){return Math.max(0,(p*b-(1-p))/b);}
+function gr(f,p,b){if(f<=0)return 0;if(f>=1)return p>=1?Math.log(1+b):-Infinity;return p*Math.log(1+b*f)+(1-p)*Math.log(1-f);}
+function bNow(){return decOf(S.odds)-1;}
+function fStar(){return kelly(S.p,bNow());}
+function fracName(c){if(c===1)return 'Full Kelly';if(Math.abs(c-.5)<1e-9)return 'Half Kelly';if(Math.abs(c-.25)<1e-9)return 'Quarter Kelly';return (+c.toFixed(2))+'x Kelly';}
+function pct(x,d){if(d===undefined)d=1;if(!isFinite(x))return 'n/a';var v=Math.abs(x*100).toFixed(d);return (x<0&&+v!==0?'−':'')+v+'%';}
+function spct(x,d){return (x>=0?'+':'')+pct(x,d);}
+function usd(v){if(!isFinite(v))return 'n/a';var a=Math.abs(v),s;if(a>=1e12)s=(a/1e12).toFixed(1)+'T';else if(a>=1e9)s=(a/1e9).toFixed(1)+'B';else if(a>=1e6)s=(a/1e6).toFixed(2)+'M';else if(a>=1e4)s=(a/1e3).toFixed(1)+'k';else if(a>=10)s=Math.round(a).toLocaleString('en-US');else s=a.toFixed(2);return (v<0&&a>=.005?'−':'')+'$'+s;}
+function money(m){var v=m*S.bank;if(!isFinite(v))return 'n/a';if(v<=0)return '$0';if(v<0.01)return '<$0.01';return usd(v);}
+function rgba(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
+
+function strategies(){var b=bNow(),fs=kelly(S.p,b);return [
+  {key:'full',name:'Full Kelly',color:'#ff3b5c',type:0,f:Math.min(1,fs)},
+  {key:'frac',name:fracName(S.frac),color:'#3d8bff',type:0,f:Math.min(1,fs*S.frac)},
+  {key:'over',name:'2x Kelly',color:'#d8dde3',type:0,f:Math.min(1,2*fs)},
+  {key:'flat',name:'Flat '+(+(S.flat*100).toFixed(2))+'%',color:'#f7c948',type:1,stake:S.flat},
+  {key:'cap',name:'Kelly, max $'+S.cap.toLocaleString('en-US'),color:'#22d3c5',type:3,f:Math.min(1,fs),cap:S.cap/S.bank},
+  {key:'mart',name:'Martingale',color:'#b06bff',type:2,stake:S.mart,raceOnly:true}];}
+var NMAIN=5;
+
+/* ===== worker ===== */
+var WSRC=[mulberry,seedFor,decOf,amMove,statsOf,quantArr,simMain,simCal,simBook].map(function(f){return f.toString();}).join('\n')+
+  '\nonmessage=function(e){var j=e.data;var pg=function(f){postMessage({id:j.id,kind:"progress",of:j.kind,f:f});};var r=j.kind==="main"?simMain(j,pg):j.kind==="cal"?simCal(j):simBook(j,pg);postMessage({id:j.id,kind:j.kind,r:r});};';
+var worker=null;
+try{worker=new Worker(URL.createObjectURL(new Blob([WSRC],{type:'text/javascript'})));
+  worker.onmessage=function(e){onResult(e.data);};
+  worker.onerror=function(){worker=null;Object.keys(lastJobs).forEach(function(k){post(lastJobs[k]);});};
+}catch(e){worker=null;}
+function runJob(job){return job.kind==='main'?simMain(job):job.kind==='cal'?simCal(job):simBook(job);}
+function post(job){lastJobs[job.kind]=job;if(worker)worker.postMessage(job);else setTimeout(function(){onResult({id:job.id,kind:job.kind,r:runJob(job)});},30);}
+var t0=0,lastMeta=null;
+function onResult(m){
+  if(m.kind==='progress'){var lj=lastJobs[m.of];if(!lj||lj.id!==m.id)return;var el=m.of==='main'?$('status'):$('bkStatus');el.textContent=(m.of==='main'?'Simulating ':'Running seasons ')+Math.round(m.f*100)+'%';return;}
+  if(!lastJobs[m.kind]||m.id!==lastJobs[m.kind].id)return;delete lastJobs[m.kind];
+  if(m.kind==='main'){MAIN=m.r;META=lastMeta;$('status').textContent='Done: '+S.N.toLocaleString('en-US')+' paths x '+S.T.toLocaleString('en-US')+' bets in '+((performance.now()-t0)/1000).toFixed(1)+' s';renderMain(true);runCal();if(!BOOK&&!lastJobs.book)runBook();}
+  else if(m.kind==='cal'){CAL=m.r;$('cStatus').textContent='';renderCal();}
+  else{BOOK=m.r;$('bkStatus').textContent='Done';renderBook();}}
+function runMain(){readControls();var st=strategies();lastMeta=st;jobId++;t0=performance.now();
+  var big=S.N*S.T>2.5e7;$('status').textContent='Simulating 0%'+(big?' (big run, give it a few seconds)':'');
+  var cr=$('chipRow');cr.classList.remove('bounce');void cr.offsetWidth;if(!RM)cr.classList.add('bounce');
+  post({kind:'main',id:jobId,p:S.p,b:bNow(),T:S.T,N:S.N,seed:S.seed,strats:st.map(function(x){return {type:x.type,f:x.f,stake:x.stake,cap:x.cap};}),fStar:fStar(),dots:[.25,.5,.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3]});
+  renderAnalytic();}
+
+/* ===== controls ===== */
+var PRESETS={nfl:{p:.55,odds:-110},coin:{p:.55,odds:100},real:{p:.532,odds:-110}};
+function syncPInput(){var D=decOf(S.odds);if(S.mode==='p'){$('pLab').textContent='Win chance %';$('pIn').value=(+(S.p*100).toFixed(2));}else{$('pLab').textContent='Edge % (EV per $1)';$('pIn').value=(+((S.p*D-1)*100).toFixed(2));}}
+function readControls(){
+  var o=+$('oddsIn').value,D=decOf(o),w='';
+  if(isFinite(D))S.odds=o;else{w='Odds must be at least 100 or at most −100. Kept '+S.odds+'. ';$('oddsIn').value=S.odds;D=decOf(S.odds);}
+  var v=+$('pIn').value;
+  if(S.mode==='p'){if(v>0&&v<100)S.p=v/100;}else{var pp=(1+v/100)/D;if(pp>0&&pp<1)S.p=pp;else w+='That edge is impossible at these odds. ';}
+  S.bank=Math.max(1,+$('bankIn').value||1000);
+  S.T=Math.round(Math.min(5000,Math.max(50,+$('tIn').value||1000)));$('tIn').value=S.T;
+  S.N=+$('nIn').value;S.frac=+$('fracIn').value;
+  S.flat=Math.min(.5,Math.max(.001,(+$('flatIn').value||2)/100));S.mart=Math.min(.2,Math.max(.001,(+$('martIn').value||1)/100));
+  S.cap=Math.max(1,+$('capIn').value||150);
+  S.seed=Math.round(+$('seedIn').value||0);
+  if(fStar()<=0)w+='No edge at these inputs: Kelly says bet nothing, so the Kelly lines stay flat.';
+  $('warn').textContent=w;renderDerived();}
+function renderDerived(){var D=decOf(S.odds),b=D-1,fs=kelly(S.p,b),e=S.p*D-1;
+  $('fracOut').textContent=(+S.frac).toFixed(2)+'x';
+  $('derived').innerHTML='<span>Breakeven <b>'+pct(1/D,2)+'</b></span><span>Win chance <b>'+pct(S.p,2)+'</b></span><span>Edge <b>'+spct(e,2)+'</b> per $1</span><span>Kelly stake <b>'+pct(fs,2)+'</b> of bankroll</span><span>Cap binds above <b>'+(fs>0?usd(S.cap/fs):'n/a')+'</b></span>';}
+function markPreset(k){document.querySelectorAll('[data-preset]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.preset===k?'true':'false');});}
+function applyPreset(k){var pr=PRESETS[k];S.odds=pr.odds;$('oddsIn').value=pr.odds;S.p=pr.p;syncPInput();markPreset(k);
+  var BE0=1/decOf(pr.odds);H.bel=pr.p;H.tru=pr.p-0.02>BE0?pr.p-0.02:(pr.p+BE0)/2;$('clvBet').value=pr.odds;syncHmSliders();runMain();}
+document.querySelectorAll('[data-preset]').forEach(function(b){b.addEventListener('click',function(){applyPreset(b.dataset.preset);});});
+$('mode').addEventListener('change',function(){readControls();S.mode=$('mode').value;syncPInput();});
+['pIn','oddsIn','bankIn','tIn','nIn','fracIn','flatIn','capIn','martIn','seedIn'].forEach(function(id){$(id).addEventListener('change',function(){markPreset('');runMain();});});
+$('fracIn').addEventListener('input',function(){$('fracOut').textContent=(+$('fracIn').value).toFixed(2)+'x';});
+$('runBtn').addEventListener('click',runMain);
+$('reraceBtn').addEventListener('click',function(){$('seedIn').value=Math.floor(Math.random()*1e6);runMain();});
+function segBind(id,attr,fn){$(id).querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){$(id).querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});fn(b.dataset[attr]);});});}
+segBind('raceSeg','q',function(v){S.raceQ=+v;renderRace(true);});
+
+/* ===== canvas helpers ===== */
+function canv(id){var cv=$(id),dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  var ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return {cv:cv,ctx:ctx,w:w,h:h};}
+function frm(c,o){o=o||{};var l=o.l!==undefined?o.l:(c.w<460?50:62);return {l:l,r:c.w-(o.r!==undefined?o.r:18),t:o.t||14,b:c.h-(o.b||30),w:c.w};}
+function logTicks(llo,lhi){var out=[],a=Math.floor(llo),z=Math.ceil(lhi),span=lhi-llo;
+  for(var k=a;k<=z;k++){var step=span>6?2:1;if((k-a)%step)continue;[1,2,5].forEach(function(m,ix){if(ix>0&&span>2.2)return;var v=Math.log10(m)+k;if(v>=llo-1e-9&&v<=lhi+1e-9)out.push(v);});}return out;}
+function linTicks(lo,hi,n){var span=hi-lo||1,st=Math.pow(10,Math.floor(Math.log10(span/n))),e=span/n/st;st*=e>5?10:e>2?5:e>1?2:1;var out=[];for(var v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)out.push(+v.toFixed(10));return out;}
+function pill(ctx,text,x,y,color,align,base){ctx.save();ctx.font='600 11px '+MONO;var tw=ctx.measureText(text).width,lx=align==='right'?x-tw:align==='center'?x-tw/2:x,ty=base==='bottom'?y-13:y;
+  ctx.fillStyle='rgba(3,21,15,.86)';ctx.fillRect(lx-3,ty-1,tw+6,15);ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText(text,lx,ty+1);ctx.restore();}
+function grid(ctx,F,xt,yt,xl,yl){ctx.save();ctx.font='11px '+MONO;ctx.fillStyle=COL.muted;ctx.strokeStyle=COL.grid;ctx.lineWidth=1;
+  yt.forEach(function(a){ctx.beginPath();ctx.moveTo(F.l,a[0]+.5);ctx.lineTo(F.r,a[0]+.5);ctx.stroke();ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(a[1],F.l-6,a[0]);});
+  xt.forEach(function(a){ctx.beginPath();ctx.moveTo(a[0]+.5,F.t);ctx.lineTo(a[0]+.5,F.b);ctx.stroke();var tw=ctx.measureText(a[1]).width,lx=Math.min(Math.max(a[0],tw/2+2),F.w-tw/2-2);ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(a[1],lx,F.b+7);});
+  ctx.strokeStyle='rgba(143,194,171,.35)';ctx.strokeRect(F.l+.5,F.t+.5,F.r-F.l,F.b-F.t);ctx.restore();
+  if(xl)pill(ctx,xl,F.r-4,F.b-4,'rgba(234,255,244,.75)','right','bottom');if(yl)pill(ctx,yl,F.l+6,F.t+5,'rgba(234,255,244,.75)','left');}
+function thinX(xt,minGap){var out=[],last=-1e9;xt.forEach(function(a){if(a[0]-last>=minGap){out.push(a);last=a[0];}});return out;}
+function vline(ctx,F,x,color,label,dash,top){if(x<F.l-1||x>F.r+1)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(x,F.t);ctx.lineTo(x,F.b);ctx.stroke();ctx.restore();
+  if(label){ctx.save();ctx.font='600 11px '+MONO;var tw=ctx.measureText(label).width;ctx.restore();var lx=x+5;if(lx+tw>F.r-2)lx=x-5-tw;pill(ctx,label,lx,F.t+(top||22),color,'left');}}
+function lerpCol(v){var a=[14,52,40],g=[61,255,143],r=[255,77,109],t=Math.min(1,Math.abs(v)),e=v>=0?g:r;
+  return 'rgb('+Math.round(a[0]+(e[0]-a[0])*t)+','+Math.round(a[1]+(e[1]-a[1])*t)+','+Math.round(a[2]+(e[2]-a[2])*t)+')';}
+function logRange(vals,minV){var lo=Infinity,hi=-Infinity;vals.forEach(function(v){v=Math.max(v,minV||1e-3);if(v<lo)lo=v;if(v>hi)hi=v;});var llo=Math.log10(lo),lhi=Math.log10(hi);if(lhi-llo<.4){llo-=.2;lhi+=.2;}var pad=(lhi-llo)*.07;return [llo-pad,lhi+pad];}
+function moneyTicks(llo,lhi,Y){return logTicks(llo,lhi).map(function(v){return [Y(Math.pow(10,v)),money(Math.pow(10,v))];});}
+function noEdgeMsg(id,msg){var c=canv(id),F=frm(c);grid(c.ctx,F,[],[],'','');c.ctx.fillStyle=COL.muted;c.ctx.font='13px '+MONO;c.ctx.textAlign='center';c.ctx.fillText(msg,c.w/2,c.h/2);}
+function polyline(ctx,pts,X,Y){ctx.beginPath();pts.forEach(function(p,i){if(i)ctx.lineTo(X(p[0]),Y(p[1]));else ctx.moveTo(X(p[0]),Y(p[1]));});ctx.stroke();}
+
+/* ===== hero ===== */
+function renderChips(){var st=META||strategies();$('chipRow').innerHTML=st.map(function(s){return '<span class="chiplab"><span class="chip" style="background:'+s.color+'"></span>'+s.name+(s.raceOnly?' (race only)':'')+'</span>';}).join('');
+  $('tabs').innerHTML=st.slice(0,NMAIN).map(function(s,i){return '<button class="tab" type="button" data-i="'+i+'" aria-pressed="'+(i===S.focus)+'"><span class="chip sm" style="background:'+s.color+'"></span>'+s.name+'</button>';}).join('');
+  $('tabs').querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){S.focus=+b.dataset.i;renderChips();renderFan();renderHist();});});}
+function renderKPIs(){var r=MAIN.res,f=r[0].stats,h=r[1].stats,fl=r[3].stats,b=bNow(),fs=fStar();
+  if(!(fs>0)){$('kpis').innerHTML=[['Kelly stake at these inputs','0%'],['Flat bettor median',money(fl.median)],['Flat bettors who end up ahead',pct(fl.up,0)],['Martingale busted',pct(r[5].stats.bust,0)]].map(kpiH).join('');return;}
+  var keep=gr(fs*S.frac,S.p,b)/gr(fs,S.p,b);
+  $('kpis').innerHTML=[['Full Kelly median after '+S.T.toLocaleString('en-US')+' bets',money(f.median)],['Full Kelly mean (lucky paths pull it up)',money(f.mean)],
+    [META[1].name+' growth kept',pct(keep,0)],['Ever at half the start: '+META[1].name+' vs full',pct(h.d50,0)+' vs '+pct(f.d50,0)]].map(kpiH).join('');}
+function kpiH(k){return '<div class="kpi"><small>'+k[0]+'</small><b>'+k[1]+'</b></div>';}
+var raceAnim=null;
+function renderRace(animate){if(!MAIN)return;var K=MAIN.K,rc=MAIN.race[S.raceQ],paths=rc.paths,st=META;
+  var all=[];paths.forEach(function(a){for(var k=0;k<=K;k++)all.push(a[k]);});var lr=logRange(all),llo=lr[0],lhi=lr[1];
+  $('raceTitle').textContent='bankroll_race · same '+S.T.toLocaleString('en-US')+' games, six bettors · seed '+S.seed;
+  $('raceNote').textContent='Showing path #'+(rc.i+1).toLocaleString('en-US')+' of '+S.N.toLocaleString('en-US')+', where full Kelly finishes at the '+Math.round(rc.q*100)+'th percentile.';
+  function draw(prog){var c=canv('race'),ctx=c.ctx,F=frm(c,{r:c.w<460?70:92});
+    var X=function(k){return F.l+k/K*(F.r-F.l);},Y=function(v){return F.b-(Math.log10(Math.max(v,1e-3))-llo)/(lhi-llo)*(F.b-F.t);};
+    grid(ctx,F,thinX(linTicks(0,S.T,5).map(function(t){return [F.l+t/S.T*(F.r-F.l),t.toLocaleString('en-US')];}),40),moneyTicks(llo,lhi,Y),'','');
+    ctx.save();ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(1));ctx.lineTo(F.r,Y(1));ctx.stroke();ctx.restore();
+    var kmax=prog*K,heads=[];
+    paths.forEach(function(a,s){ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();ctx.strokeStyle=st[s].color;ctx.lineWidth=s<2?2.4:1.7;ctx.lineJoin='round';ctx.beginPath();
+      var kf=Math.floor(kmax);for(var k=0;k<=kf;k++){var x=X(k),y=Y(a[k]);if(k)ctx.lineTo(x,y);else ctx.moveTo(x,y);}
+      var v=a[kf];if(kf<K){var fr=kmax-kf;v=a[kf]*(1-fr)+a[kf+1]*fr;ctx.lineTo(X(kmax),Y(v));}ctx.stroke();ctx.restore();heads.push({y:Y(v),x:X(kmax),v:v,s:s});});
+    heads.sort(function(a,b){return a.y-b.y;});
+    var ly=heads.map(function(h){return h.y;});for(var i=1;i<ly.length;i++)if(ly[i]-ly[i-1]<15)ly[i]=ly[i-1]+15;
+    var over=ly[ly.length-1]-(F.b-4);if(over>0)for(i=0;i<ly.length;i++)ly[i]-=over;
+    heads.forEach(function(h,i){ctx.fillStyle=st[h.s].color;ctx.beginPath();ctx.arc(h.x,h.y,5,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.setLineDash([2,2]);ctx.stroke();ctx.setLineDash([]);
+      ctx.font='600 11px '+MONO;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(money(h.v),Math.min(h.x+9,F.r+6),ly[i]);});}
+  if(raceAnim)cancelAnimationFrame(raceAnim);
+  if(!animate||RM){draw(1);return;}
+  var start=performance.now(),dur=2600;(function step(now){var pr=Math.min(1,(now-start)/dur);pr=1-Math.pow(1-pr,1.6);draw(pr);if(pr<1)raceAnim=requestAnimationFrame(step);})(start);}
+
+/* ===== section 2 ===== */
+var fanHover=null,fanGeom=null;
+function renderFan(){if(!MAIN)return;var s=S.focus,r=MAIN.res[s],st=META[s],K=MAIN.K,cpT=MAIN.cpT;
+  $('fanTitle').textContent=st.name+' · '+S.N.toLocaleString('en-US')+' paths';
+  var vals=[];for(var k=0;k<=K;k++){vals.push(r.q5[k],r.q95[k]);}var lr=logRange(vals),llo=lr[0],lhi=lr[1];
+  var c=canv('fan'),ctx=c.ctx,F=frm(c,{r:24});
+  var X=function(t){return F.l+t/S.T*(F.r-F.l);},Y=function(v){return F.b-(Math.log10(Math.max(v,1e-4))-llo)/(lhi-llo)*(F.b-F.t);};
+  grid(ctx,F,thinX(linTicks(0,S.T,5).map(function(t){return [X(t),t.toLocaleString('en-US')];}),40),moneyTicks(llo,lhi,Y),'bet #','bankroll');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();
+  function band(a,b,al){ctx.fillStyle=rgba(st.color,al);ctx.beginPath();for(var k=0;k<=K;k++){var x=X(cpT[k]),y=Y(a[k]);if(k)ctx.lineTo(x,y);else ctx.moveTo(x,y);}for(k=K;k>=0;k--)ctx.lineTo(X(cpT[k]),Y(b[k]));ctx.closePath();ctx.fill();}
+  band(r.q5,r.q95,.16);band(r.q25,r.q75,.3);
+  ctx.lineWidth=1;r.samples.forEach(function(a){ctx.strokeStyle=rgba(st.color,.3);ctx.beginPath();for(var k=0;k<=K;k++){var x=X(cpT[k]),y=Y(a[k]);if(k)ctx.lineTo(x,y);else ctx.moveTo(x,y);}ctx.stroke();});
+  ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(1));ctx.lineTo(F.r,Y(1));ctx.stroke();
+  if(st.type===3&&fStar()>0){var capW=st.cap/st.f;ctx.strokeStyle='rgba(34,211,197,.8)';ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(F.l,Y(capW));ctx.lineTo(F.r,Y(capW));ctx.stroke();}
+  ctx.strokeStyle=COL.gold;ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();for(k=0;k<=K;k++){var x=X(cpT[k]),y=Y(r.mean[k]);if(k)ctx.lineTo(x,y);else ctx.moveTo(x,y);}ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='#fff';ctx.lineWidth=2.6;ctx.beginPath();for(k=0;k<=K;k++){x=X(cpT[k]);y=Y(r.q50[k]);if(k)ctx.lineTo(x,y);else ctx.moveTo(x,y);}ctx.stroke();
+  if(fanHover!==null){x=X(cpT[fanHover]);ctx.strokeStyle=COL.gold;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,F.t);ctx.lineTo(x,F.b);ctx.stroke();}
+  ctx.restore();
+  if(st.type===3&&fStar()>0){var cy=Y(st.cap/st.f);if(cy>F.t+20&&cy<F.b-10)pill(ctx,'cap binds here',F.l+6,cy-16,'#22d3c5','left');}
+  fanGeom={F:F,K:K};}
+$('fan').addEventListener('pointermove',function(e){if(!MAIN||!fanGeom)return;var rc=this.getBoundingClientRect(),x=e.clientX-rc.left,F=fanGeom.F;
+  if(x<F.l||x>F.r){fanHover=null;$('fanTip').style.display='none';renderFan();return;}
+  var k=Math.round((x-F.l)/(F.r-F.l)*fanGeom.K);fanHover=k;renderFan();var r=MAIN.res[S.focus],tip=$('fanTip');
+  tip.innerHTML='bet '+MAIN.cpT[k].toLocaleString('en-US')+'<br>95th '+money(r.q95[k])+'<br>median '+money(r.q50[k])+'<br>5th '+money(r.q5[k])+'<br>mean '+money(r.mean[k]);
+  tip.style.display='block';var tw=tip.offsetWidth;tip.style.left=Math.max(0,Math.min(rc.width-tw,x+12))+'px';tip.style.top=(F.t+8)+'px';});
+$('fan').addEventListener('pointerleave',function(){fanHover=null;$('fanTip').style.display='none';renderFan();});
+function histFor(term,st,T,b){var N=term.length,lo=Infinity,hi=-Infinity,bust=0,lv=new Float64Array(N);
+  for(var i=0;i<N;i++){var v=term[i];if(v<=1e-3){bust++;lv[i]=NaN;continue;}lv[i]=Math.log10(v);if(lv[i]<lo)lo=lv[i];if(lv[i]>hi)hi=lv[i];}
+  var srt=Float64Array.from(lv.filter(function(x){return x===x;})).sort();if(!srt.length)return {start:-1,w:1,nb:2,counts:[0,0],bust:bust/N};
+  hi=srt[Math.min(srt.length-1,Math.floor(srt.length*.997))];lo=srt[Math.floor(srt.length*.001)];if(hi-lo<.05){lo-=.05;hi+=.05;}
+  var w,start;
+  if(st.type===0&&st.f>0&&st.f<1){var step=Math.log10((1+b*st.f)/(1-st.f)),L0=T*Math.log10(1-st.f),mm=Math.max(1,Math.round(((hi-lo)/44)/step));w=mm*step;var base=L0-0.5*step;start=base+Math.floor((lo-base)/w)*w;}
+  else{w=(hi-lo)/44;start=lo;}
+  var nb=Math.max(1,Math.ceil((hi-start)/w+1e-9)),counts=new Float64Array(nb);
+  for(i=0;i<N;i++){if(lv[i]!==lv[i])continue;var k=Math.floor((lv[i]-start)/w);if(k<0)k=0;if(k>=nb)k=nb-1;counts[k]+=1/N;}
+  return {start:start,w:w,nb:nb,counts:counts,bust:bust/N};}
+function renderHist(){if(!MAIN)return;var s=S.focus,r=MAIN.res[s],st=META[s],hb=histFor(r.term,st,S.T,bNow());
+  $('histTitle').textContent=st.name+' · final bankroll';
+  var c=canv('hist'),ctx=c.ctx,F=frm(c,{l:c.w<460?40:48,r:20}),ymax=0;for(var i=0;i<hb.nb;i++)ymax=Math.max(ymax,hb.counts[i]);ymax=Math.max(ymax*1.15,.02);
+  var xlo=Math.min(hb.start,-0.15),xhi=Math.max(hb.start+hb.nb*hb.w,0.15);
+  var X=function(lv){return F.l+(lv-xlo)/(xhi-xlo)*(F.r-F.l);},Y=function(v){return F.b-v/ymax*(F.b-F.t);};
+  var xt=logTicks(xlo,xhi);if(xt.length>6)xt=xt.filter(function(v){return Math.abs(v-Math.round(v))<1e-9;});
+  grid(ctx,F,thinX(xt.map(function(v){return [X(v),money(Math.pow(10,v))];}),52),linTicks(0,ymax,4).map(function(v){return [Y(v),Math.round(v*100)+'%'];}),'','share of paths');
+  for(i=0;i<hb.nb;i++){var x0=X(hb.start+i*hb.w),x1=X(hb.start+(i+1)*hb.w),mid=hb.start+(i+.5)*hb.w;ctx.fillStyle=mid<0?rgba(st.color,.55):st.color;ctx.fillRect(x0+.5,Y(hb.counts[i]),Math.max(1,x1-x0-1),F.b-Y(hb.counts[i]));}
+  vline(ctx,F,X(0),'rgba(234,255,244,.6)','start',[3,3],58);
+  var med=r.stats.median,mn=r.stats.mean,lm=Math.log10(Math.max(mn,1e-6));
+  vline(ctx,F,X(Math.min(xhi,Math.max(xlo,Math.log10(Math.max(med,1e-6))))),'#fff','median '+money(med),[],22);
+  vline(ctx,F,X(Math.min(xhi,Math.max(xlo,lm))),COL.gold,'mean '+money(mn)+(lm>xhi?' (off chart)':''),[6,4],40);
+  if(hb.bust>0.001)pill(ctx,'busted '+pct(hb.bust,1),F.l+6,F.t+76,'#ff8fa3','left');}
+function renderScore(){var rows=MAIN.res.slice(0,NMAIN).map(function(r,i){var s=r.stats,st=META[i];return '<tr><td><span class="nm"><span class="chip sm" style="background:'+st.color+'"></span>'+st.name+'</span></td><td>'+money(s.median)+'</td><td>'+money(s.mean)+'</td><td class="hm">'+money(s.p5)+'</td><td class="hm">'+money(s.p95)+'</td><td class="'+(s.up>=.5?'pos':'neg')+'">'+pct(s.up,0)+'</td><td>'+pct(s.d50,0)+'</td><td class="hm">'+pct(s.avgMdd,0)+'</td><td class="hm">'+pct(s.bust,1)+'</td><td class="hm '+(s.medLogG>=0?'pos':'neg')+'">'+(isFinite(s.medLogG)?spct(Math.exp(s.medLogG*100)-1,1):'bust')+'</td></tr>';}).join('');
+  $('score').innerHTML='<thead><tr><th>Strategy</th><th>Median</th><th>Mean</th><th class="hm">5th pct</th><th class="hm">95th pct</th><th>Chance up</th><th>Ever at half</th><th class="hm">Avg max drawdown</th><th class="hm">Busted</th><th class="hm">Median per 100 bets</th></tr></thead><tbody>'+rows+'</tbody>';}
+function renderS2Take(){var f=MAIN.res[0].stats,o=MAIN.res[2].stats,cp=MAIN.res[4].stats,fl=MAIN.res[3].stats,m=MAIN.res[5].stats;
+  if(!(fStar()>0)){$('s2take').innerHTML='No edge at these inputs. Kelly bets nothing, so every Kelly line sits at the start. The flat bettor still bets and ends at a median of <b>'+money(fl.median)+'</b>: with no edge, betting just pays the hold. Martingale busts <b>'+pct(m.bust,0)+'</b>.';return;}
+  $('s2take').innerHTML='Full Kelly mean is <b>'+(f.median>0?(f.mean/f.median).toFixed(1)+'x':'far above')+'</b> its median: a few monster paths drag the average up while the typical bettor gets '+money(f.median)+'. Capping the same strategy at $'+S.cap.toLocaleString('en-US')+' per bet pulls the mean from '+money(f.mean)+' to <b>'+money(cp.mean)+'</b>: once the cap binds, growth is a straight line, not a curve. Its median ends higher because it bets less on rich paths, but its average log growth is lower, which is the quantity Kelly maximizes. Martingale, in the race only, busts '+pct(m.bust,0)+' of bettors.';}
+
+/* ===== section 3 ===== */
+function renderGrowth(){var b=bNow(),fs=fStar();
+  if(!(fs>0)){noEdgeMsg('grow','No edge: Kelly bets nothing here.');$('s3take').textContent='No edge at these inputs, so every bet size loses on average.';return null;}
+  var c=canv('grow'),ctx=c.ctx,F=frm(c),pts=[],vals=[];for(var m=0;m<=3.0001;m+=.02){var v=Math.max(Math.exp(S.T*gr(Math.min(1,m*fs),S.p,b)),1e-3);pts.push([m,v]);vals.push(v);}
+  (MAIN?MAIN.dots:[]).forEach(function(d){vals.push(d[1]);});var lr=logRange(vals),llo=lr[0],lhi=lr[1];
+  var X=function(m){return F.l+m/3*(F.r-F.l);},Y=function(v){return F.b-(Math.log10(Math.max(v,1e-3))-llo)/(lhi-llo)*(F.b-F.t);};
+  grid(ctx,F,[0,.5,1,1.5,2,2.5,3].map(function(m){return [X(m),m+'x'];}),moneyTicks(llo,lhi,Y),'bet size, x Kelly','');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();
+  ctx.fillStyle='rgba(255,77,109,.09)';ctx.fillRect(F.l,Y(1),F.r-F.l,F.b-Y(1));
+  ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(1));ctx.lineTo(F.r,Y(1));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle=COL.gain;ctx.lineWidth=2.6;polyline(ctx,pts,X,Y);
+  (MAIN?MAIN.dots:[]).forEach(function(d){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(X(d[0]),Y(Math.max(d[1],1e-3)),4,0,7);ctx.fill();});ctx.restore();
+  var z=NaN,a=1,bb=Math.min(1/fs,8);if(gr(Math.min(1,bb*fs),S.p,b)<0){for(var it=0;it<60;it++){var mid=(a+bb)/2;if(gr(mid*fs,S.p,b)>0)a=mid;else bb=mid;}z=(a+bb)/2;}
+  pill(ctx,'median after '+S.T.toLocaleString('en-US')+' bets',F.l+6,F.t+5,'rgba(234,255,244,.75)','left');
+  vline(ctx,F,X(1),'#ff3b5c','full Kelly',[],26);vline(ctx,F,X(S.frac),'#3d8bff',fracName(S.frac).replace(' Kelly',''),[5,4],46);
+  if(isFinite(z))vline(ctx,F,X(z),COL.gold,'zero growth '+z.toFixed(2)+'x',[2,3],66);
+  return {z:z,keep:gr(fs*.5,S.p,b)/gr(fs,S.p,b)};}
+function renderDD(){var c=canv('dd'),ctx=c.ctx,F=frm(c,{l:c.w<460?40:48}),X=function(x){return F.l+x/100*(F.r-F.l);},Y=function(v){return F.b-v*(F.b-F.t);};
+  grid(ctx,F,[0,20,40,60,80,100].map(function(x){return [X(x),x+'%'];}),[0,.25,.5,.75,1].map(function(v){return [Y(v),Math.round(v*100)+'%'];}),'drawdown from peak','');
+  MAIN.res.slice(0,NMAIN).forEach(function(r,s){ctx.strokeStyle=META[s].color;ctx.lineWidth=s<2?2.6:1.8;ctx.beginPath();r.dd.forEach(function(v,i){var x=X(i*2),y=Y(v);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.stroke();});
+  $('ddKeys').innerHTML=META.slice(0,NMAIN).map(function(s){return '<span><i class="ln" style="background:'+s.color+'"></i>'+s.name+'</span>';}).join('');}
+function renderS3Take(g){if(!g||!MAIN)return;var f=MAIN.res[0],h=MAIN.res[1];
+  $('s3take').innerHTML='Half Kelly keeps <b>'+pct(g.keep,0)+'</b> of full Kelly’s growth rate. '+(isFinite(g.z)?'Growth hits zero at <b>'+g.z.toFixed(2)+'x</b> Kelly. ':'')+'Chance of a 50% drop from a peak within '+S.T.toLocaleString('en-US')+' bets: full Kelly <b>'+pct(f.dd[25],0)+'</b>, '+META[1].name+' <b>'+pct(h.dd[25],0)+'</b>.';}
+
+/* ===== section 1: heatmap ===== */
+var LF=[0];function lfac(n){while(LF.length<=n)LF.push(LF[LF.length-1]+Math.log(LF.length));return LF[n];}
+function tailArr(T,p){lfac(T);var pm=new Float64Array(T+1),lp=Math.log(p),lq=Math.log(1-p);for(var k=0;k<=T;k++)pm[k]=Math.exp(LF[T]-LF[k]-LF[T-k]+k*lp+(T-k)*lq);
+  var tail=new Float64Array(T+2);for(k=T;k>=0;k--)tail[k]=tail[k+1]+pm[k];var med=0;for(k=0;k<=T;k++){if(1-tail[k+1]>=.5){med=k;break;}}return {tail:tail,med:med};}
+function exactOut(f,ta,T,b){if(f<=0)return {med:1,up:0,nob:true};if(f>=1)return {med:ta.med===T?Math.pow(1+b,T):0,up:ta.tail[T]};
+  var B=Math.log(1+b*f),A=-Math.log(1-f),med=Math.exp(ta.med*B-(T-ta.med)*A),kmin=Math.floor(T*A/(A+B))+1;return {med:med,up:kmin>T?0:ta.tail[kmin]};}
+var HM={n:44,lo:0,hi:0,cells:null,key:''};
+function hmRange(){var BE=1/decOf(S.odds);return [Math.floor((BE-.03)*1000)/1000,Math.ceil((BE+.09)*1000)/1000];}
+function computeHM(){var b=bNow(),T=S.T,rg=hmRange(),n=HM.n,key=[S.odds,T,H.mult,rg[0]].join('|');if(HM.key===key)return;HM.key=key;HM.lo=rg[0];HM.hi=rg[1];
+  var cells=[],step=(HM.hi-HM.lo)/(n-1);for(var yi=0;yi<n;yi++){var ta=tailArr(T,HM.lo+yi*step),row=[];for(var xi=0;xi<n;xi++)row.push(exactOut(H.mult*kelly(HM.lo+xi*step,b),ta,T,b));cells.push(row);}HM.cells=cells;}
+function syncHmSliders(){var rg=hmRange();['belIn','truIn'].forEach(function(id){$(id).min=rg[0];$(id).max=rg[1];});H.bel=Math.min(rg[1],Math.max(rg[0],H.bel));H.tru=Math.min(rg[1],Math.max(rg[0],H.tru));$('belIn').value=H.bel;$('truIn').value=H.tru;}
+function cellColor(o){if(o.nob)return 'rgb(38,62,54)';if(H.metric==='med'){var m=o.med;return lerpCol(m<=0?-1:Math.max(-1,Math.min(1,Math.log10(m))));}return lerpCol((o.up-.5)*2);}
+function renderHM(){computeHM();var c=canv('hm'),ctx=c.ctx,F=frm(c,{l:c.w<460?46:54,b:38,t:10,r:12}),n=HM.n,lo=HM.lo,hi=HM.hi,step=(hi-lo)/(n-1);
+  var cw=(F.r-F.l)/n,ch=(F.b-F.t)/n,PX=function(p){return F.l+((p-lo)/step+.5)*cw;},PY=function(p){return F.b-((p-lo)/step+.5)*ch;};
+  for(var yi=0;yi<n;yi++)for(var xi=0;xi<n;xi++){ctx.fillStyle=cellColor(HM.cells[yi][xi]);ctx.fillRect(F.l+xi*cw,F.b-(yi+1)*ch,cw+.6,ch+.6);}
+  var tks=linTicks(lo,hi,5).filter(function(v){return v>=lo&&v<=hi;});
+  grid(ctx,F,tks.map(function(v){return [PX(v),(v*100).toFixed(0)+'%'];}),tks.map(function(v){return [PY(v),(v*100).toFixed(0)+'%'];}),'you believe →','truth ↑');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();
+  ctx.strokeStyle='rgba(234,255,244,.7)';ctx.setLineDash([5,4]);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(PX(lo),PY(lo));ctx.lineTo(PX(hi),PY(hi));ctx.stroke();
+  var BE=1/decOf(S.odds);ctx.strokeStyle='rgba(255,77,109,.9)';ctx.beginPath();ctx.moveTo(F.l,PY(BE));ctx.lineTo(F.r,PY(BE));ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  var nbx=PX(BE)+6;pill(ctx,'no bet zone',F.l+6,F.t+26,'#cfeee0','left');
+  pill(ctx,c.w<460?'breakeven':'breakeven: below, every bet loses',F.l+6,PY(BE)+4,'#ffd0d8','left');
+  pill(ctx,'overestimated',F.r-6,F.b-ch*n*0.22,'rgba(234,255,244,.9)','right');pill(ctx,'underestimated',Math.max(nbx,F.l+6),F.t+ch*n*0.12,'rgba(234,255,244,.9)','left');
+  var sx=PX(H.bel),sy=PY(H.tru);ctx.strokeStyle=COL.gold;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(sx,sy,8,0,7);ctx.stroke();ctx.fillStyle=COL.gold;ctx.beginPath();ctx.arc(sx,sy,2.5,0,7);ctx.fill();
+  HM.F=F;HM.cw=cw;HM.ch=ch;
+  var L=$('hmLegend'),gb='<span class="grad" style="background:linear-gradient(90deg,'+lerpCol(-1)+','+lerpCol(0)+','+lerpCol(1)+')"></span>';
+  L.innerHTML=H.metric==='med'?'<span>0.1x</span>'+gb+'<span>10x+</span><span><i class="sw" style="background:rgb(38,62,54)"></i> no bet</span><span>median vs start</span>':'<span>0%</span>'+gb+'<span>100%</span><span><i class="sw" style="background:rgb(38,62,54)"></i> no bet</span><span>chance up after '+S.T.toLocaleString('en-US')+' bets</span>';}
+function hmPick(e){var rc=$('hm').getBoundingClientRect(),F=HM.F;if(!F)return null;var x=e.clientX-rc.left,y=e.clientY-rc.top;
+  if(x<F.l||x>F.r||y<F.t||y>F.b)return null;var n=HM.n,step=(HM.hi-HM.lo)/(n-1),xi=Math.min(n-1,Math.floor((x-F.l)/HM.cw)),yi=Math.min(n-1,Math.floor((F.b-y)/HM.ch));
+  return {xi:xi,yi:yi,bel:HM.lo+xi*step,tru:HM.lo+yi*step,x:x,y:y,rc:rc};}
+var hmDrag=false;
+$('hm').addEventListener('pointerdown',function(e){var p=hmPick(e);if(!p)return;hmDrag=true;try{this.setPointerCapture(e.pointerId);}catch(_){}H.bel=p.bel;H.tru=p.tru;syncHmSliders();renderS1();});
+$('hm').addEventListener('pointerup',function(){hmDrag=false;});
+$('hm').addEventListener('pointermove',function(e){var p=hmPick(e),tip=$('hmTip');if(!p){tip.style.display='none';return;}
+  if(hmDrag){H.bel=p.bel;H.tru=p.tru;syncHmSliders();renderS1();}
+  var o=HM.cells[p.yi][p.xi];tip.innerHTML='believe '+pct(p.bel,1)+' · truth '+pct(p.tru,1)+'<br>'+(o.nob?'Kelly says no bet':'median '+money(o.med)+'<br>chance up '+pct(o.up,0));
+  tip.style.display='block';var tw=tip.offsetWidth;tip.style.left=Math.max(0,Math.min(p.rc.width-tw,p.x+14))+'px';tip.style.top=Math.max(0,p.y-50)+'px';});
+$('hm').addEventListener('pointerleave',function(){$('hmTip').style.display='none';});
+$('hm').addEventListener('keydown',function(e){var st=(HM.hi-HM.lo)/(HM.n-1),d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(!d)return;e.preventDefault();H.bel+=d[0]*st;H.tru+=d[1]*st;syncHmSliders();renderS1();});
+$('belIn').addEventListener('input',function(){H.bel=+this.value;renderS1();});
+$('truIn').addEventListener('input',function(){H.tru=+this.value;renderS1();});
+segBind('hmMult','m',function(v){H.mult=+v;renderS1();});
+segBind('hmMetric','k',function(v){H.metric=v;renderS1();});
+function renderS1(){var b=bNow(),T=S.T,BE=1/decOf(S.odds);renderHM();
+  $('belOut').textContent=pct(H.bel,1);$('truOut').textContent=pct(H.tru,1);
+  var fb=kelly(H.bel,b),ft=kelly(H.tru,b),ta=tailArr(T,H.tru),taB=tailArr(T,H.bel),ratio=ft>0?fb/ft:Infinity;
+  $('hmBig').innerHTML='<div class="stat"><small>Kelly on your belief</small><b>'+pct(fb,2)+'</b></div><div class="stat"><small>Right size (true Kelly)</small><b>'+pct(ft,2)+'</b></div><div class="stat"><small>You are betting</small><b class="'+(ratio>2?'neg':ratio>1.2?'':'pos')+'">'+(fb<=0?'nothing':ft<=0?'into a loser':ratio.toFixed(1)+'x right')+'</b></div>';
+  var rows=[[1,'Full','#ff3b5c'],[.5,'Half','#3d8bff'],[.25,'Quarter','#d8dde3']].map(function(m){var o=exactOut(m[0]*fb,ta,T,b),ideal=exactOut(m[0]*fb,taB,T,b);
+    return '<tr><td><span class="nm"><span class="chip sm" style="background:'+m[2]+'"></span>'+m[1]+'</span></td><td>'+money(ideal.med)+'</td><td class="'+(o.med>=1?'pos':'neg')+'">'+money(o.med)+'</td><td>'+(o.nob?'n/a':pct(o.up,0))+'</td></tr>';}).join('');
+  $('hmTable').innerHTML='<thead><tr><th>Kelly</th><th>If right</th><th>Reality</th><th>Chance up</th></tr></thead><tbody>'+rows+'</tbody>';
+  var c=canv('hmLine'),ctx=c.ctx,F=frm(c),lo=HM.lo,hi=HM.hi,curves=[[1,'#ff3b5c'],[.5,'#3d8bff'],[.25,'#d8dde3']],data=[],vals=[];
+  for(var i=0;i<=40;i++){var pt=lo+(hi-lo)*i/40,tt=tailArr(T,pt),row=[pt];curves.forEach(function(cv){var v=Math.max(1e-3,exactOut(cv[0]*fb,tt,T,b).med);row.push(v);vals.push(v);});data.push(row);}
+  var lr=logRange(vals),llo=lr[0],lhi=lr[1];
+  var X=function(p){return F.l+(p-lo)/(hi-lo)*(F.r-F.l);},Y=function(v){return F.b-(Math.log10(v)-llo)/(lhi-llo)*(F.b-F.t);};
+  grid(ctx,F,thinX(linTicks(lo,hi,5).map(function(v){return [X(v),(v*100).toFixed(0)+'%'];}),40),moneyTicks(llo,lhi,Y),'true win chance','');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(1));ctx.lineTo(F.r,Y(1));ctx.stroke();ctx.setLineDash([]);
+  curves.forEach(function(cv,j){ctx.strokeStyle=cv[1];ctx.lineWidth=j?1.8:2.6;polyline(ctx,data.map(function(r){return [r[0],r[j+1]];}),X,Y);});ctx.restore();
+  vline(ctx,F,X(BE),'#ff8fa3','breakeven',[3,3],6);vline(ctx,F,X(H.bel),COL.gold,'you believe',[],26);vline(ctx,F,X(H.tru),'#fff','truth',[5,4],46);
+  $('hmKeys').innerHTML=curves.map(function(cv,j){return '<span><i class="ln" style="background:'+cv[1]+'"></i>'+['Full','Half','Quarter'][j]+' Kelly</span>';}).join('')+'<span class="mut">Median bankroll if you bet your belief</span>';
+  var oF=exactOut(fb,ta,T,b),oH=exactOut(fb*.5,ta,T,b),rF=exactOut(fb,taB,T,b),t;
+  if(fb<=0)t='At a belief of '+pct(H.bel,1)+' you see no edge, so Kelly bets nothing. Move the belief above breakeven ('+pct(BE,1)+').';
+  else if(H.tru<H.bel-1e-9)t='Believing <b>'+pct(H.bel,1)+'</b> when the truth is <b>'+pct(H.tru,1)+'</b> means '+(ft>0?'betting <b>'+ratio.toFixed(1)+'x</b> the right amount.':'betting <b>'+pct(fb,2)+'</b> of your bankroll on bets that actually lose.')+' Full Kelly’s median goes from '+money(rF.med)+' to <b>'+money(oF.med)+'</b>. Half Kelly lands at <b>'+money(oH.med)+'</b>. Overbetting costs much more than underbetting, which is the real case for fractional Kelly.';
+  else t='Here you are underestimating, so you bet less than ideal. You still grow: full Kelly median '+money(oF.med)+'. Underbetting is cheap. Try dragging the truth below your belief.';
+  $('s1take').innerHTML=t;}
+
+/* ===== section 4: calibration ===== */
+var C={s:1.3,t:.03,n:0};var CS=null;
+function readCal(){C.s=+$('cS').value;C.t=+$('cT').value/100;C.n=+$('cN').value/100;$('cSOut').textContent=C.s.toFixed(2)+(C.s>1.001?' (overconfident)':C.s<.999?' (underconfident)':' (calibrated)');$('cTOut').textContent=(C.t*100).toFixed(2)+' pts';$('cNOut').textContent=(C.n*100).toFixed(2)+' pts';}
+function calSample(){if(CS)return CS;var r=mulberry(12345),n=20000,z1=new Float64Array(n),z2=new Float64Array(n);for(var i=0;i<n;i++){var u1=Math.max(1e-12,r()),u2=r(),rad=Math.sqrt(-2*Math.log(u1));z1[i]=rad*Math.cos(6.283185307179586*u2);z2[i]=rad*Math.sin(6.283185307179586*u2);}CS={z1:z1,z2:z2,n:n};return CS;}
+function calStats(s,nu,mults){var cs=calSample(),b=bNow(),BE=1/(1+b),tau=C.t*4,nuL=nu*4,G=mults.map(function(){return 0;}),bri=0,ll=0,bets=0;
+  for(var i=0;i<cs.n;i++){var L=tau*cs.z1[i],pt=1/(1+Math.exp(-L)),m=1/(1+Math.exp(-(s*L+nuL*cs.z2[i])));m=Math.min(1-1e-9,Math.max(1e-9,m));
+    bri+=pt*(1-m)*(1-m)+(1-pt)*m*m;ll+=-pt*Math.log(m)-(1-pt)*Math.log(1-m);
+    var pm=0,pw=0;if(m>BE){pm=m;pw=pt;}else if(1-m>BE){pm=1-m;pw=1-pt;}if(pm>0)bets++;
+    var fK=pm>0?kelly(pm,b):0;for(var j=0;j<mults.length;j++){var f=Math.min(.999,mults[j]*fK);if(f>0)G[j]+=pw*Math.log(1+b*f)+(1-pw)*Math.log(1-f);}}
+  return {G:G.map(function(g){return g/cs.n;}),brier:bri/cs.n,ll:ll/cs.n,bets:bets/cs.n};}
+var CMULTS=[];for(var cm=0;cm<=2.0001;cm+=.05)CMULTS.push(+cm.toFixed(2));
+function renderCalAnalytic(){readCal();var T=S.T,me=calStats(C.s,C.n,CMULTS),ref=calStats(1,0,CMULTS);
+  var c=canv('cCurve'),ctx=c.ctx,F=frm(c,{l:c.w<460?50:58}),y1=me.G.map(function(g){return Math.max(1e-3,Math.exp(T*g));}),y2=ref.G.map(function(g){return Math.max(1e-3,Math.exp(T*g));});
+  var lr=logRange(y1.concat(y2)),llo=lr[0],lhi=lr[1],X=function(m){return F.l+m/2*(F.r-F.l);},Y=function(v){return F.b-(Math.log10(Math.max(v,1e-3))-llo)/(lhi-llo)*(F.b-F.t);};
+  grid(ctx,F,[0,.5,1,1.5,2].map(function(m){return [X(m),m+'x'];}),moneyTicks(llo,lhi,Y),'x Kelly on your model','');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(1));ctx.lineTo(F.r,Y(1));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(234,255,244,.5)';ctx.lineWidth=1.8;polyline(ctx,CMULTS.map(function(m,i){return [m,y2[i]];}),X,Y);ctx.strokeStyle=COL.gain;ctx.lineWidth=2.6;polyline(ctx,CMULTS.map(function(m,i){return [m,y1[i]];}),X,Y);ctx.restore();
+  var bi=0;for(var i=1;i<me.G.length;i++)if(me.G[i]>me.G[bi])bi=i;var best=CMULTS[bi];vline(ctx,F,X(best),COL.gold,'best '+best.toFixed(2)+'x',[],8);vline(ctx,F,X(1),'#ff3b5c','',[3,3]);
+  // reliability
+  var cs=calSample(),tau=C.t*4,nuL=C.n*4,nb=20,lo=.40,hi=.60,sm=new Float64Array(nb),sp=new Float64Array(nb),cn=new Float64Array(nb);
+  for(i=0;i<cs.n;i++){var L=tau*cs.z1[i],pt=1/(1+Math.exp(-L)),m=1/(1+Math.exp(-(C.s*L+nuL*cs.z2[i]))),k=Math.floor((m-lo)/(hi-lo)*nb);if(k<0||k>=nb)continue;sm[k]+=m;sp[k]+=pt;cn[k]++;}
+  var c2=canv('cRel'),x2=c2.ctx,F2=frm(c2,{l:c2.w<460?44:50}),PX=function(v){return F2.l+(v-lo)/(hi-lo)*(F2.r-F2.l);},PY=function(v){return F2.b-(v-lo)/(hi-lo)*(F2.b-F2.t);};
+  var tk=[.40,.45,.5,.55,.6];grid(x2,F2,tk.map(function(v){return [PX(v),Math.round(v*100)+'%'];}),tk.map(function(v){return [PY(v),Math.round(v*100)+'%'];}),'model says','');
+  var BE=1/decOf(S.odds);x2.fillStyle='rgba(247,201,72,.08)';if(BE<hi){x2.fillRect(PX(BE),F2.t,F2.r-PX(BE),F2.b-F2.t);x2.fillRect(F2.l,F2.t,PX(1-BE)-F2.l,F2.b-F2.t);}
+  x2.strokeStyle='rgba(234,255,244,.6)';x2.setLineDash([5,4]);x2.beginPath();x2.moveTo(PX(lo),PY(lo));x2.lineTo(PX(hi),PY(hi));x2.stroke();x2.setLineDash([]);
+  x2.fillStyle=COL.gain;for(k=0;k<nb;k++){if(cn[k]<60)continue;x2.beginPath();x2.arc(PX(sm[k]/cn[k]),PY(Math.min(hi,Math.max(lo,sp[k]/cn[k]))),4.5,0,7);x2.fill();}
+  pill(x2,'actually wins',F2.l+6,F2.t+5,'rgba(234,255,244,.75)','left');pill(x2,'shaded: you bet',F2.r-6,F2.t+24,COL.gold,'right');
+  var mF=Math.exp(T*me.G[CMULTS.indexOf(1)]),rF=Math.exp(T*ref.G[CMULTS.indexOf(1)]);
+  $('cBig').innerHTML='<div class="stat"><small>Brier: market 50/50</small><b>0.25000</b></div><div class="stat"><small>Brier: calibrated model</small><b>'+ref.brier.toFixed(5)+'</b></div><div class="stat"><small>Brier: your model</small><b>'+me.brier.toFixed(5)+'</b></div>'+
+    '<div class="stat"><small>Log loss: calibrated vs yours</small><b>'+ref.ll.toFixed(4)+' / '+me.ll.toFixed(4)+'</b></div><div class="stat"><small>Games you bet</small><b>'+pct(me.bets,0)+'</b></div><div class="stat"><small>Full Kelly median: calibrated vs yours</small><b>'+money(rF)+' / '+money(mF)+'</b></div>';
+  return {best:best,mF:mF,rF:rF,me:me,ref:ref};}
+function runCal(){readCal();jobId++;$('cStatus').textContent='Running '+S.N.toLocaleString('en-US')+' bettors';CAL=null;
+  post({kind:'cal',id:jobId,s:C.s,tau:C.t*4,nu:C.n*4,b:bNow(),T:S.T,N:Math.min(S.N,10000),seed:S.seed});}
+['cS','cT','cN'].forEach(function(id){$(id).addEventListener('input',function(){renderCalAnalytic();});$(id).addEventListener('change',runCal);});
+$('cRun').addEventListener('click',runCal);
+var CCOL=['#f7c948','#ff3b5c','#3d8bff','#d8dde3'],CNAME=['Knows the truth','Full Kelly','Half Kelly','Quarter Kelly'];
+function renderCal(){var a=renderCalAnalytic();if(!CAL)return;
+  var hs=CAL.res.map(function(r,i){return histFor(r.term,{type:1},S.T,bNow());}),c=canv('cHist'),ctx=c.ctx,F=frm(c,{l:c.w<460?40:46}),xlo=Infinity,xhi=-Infinity,ymax=0;
+  hs.forEach(function(h){xlo=Math.min(xlo,h.start);xhi=Math.max(xhi,h.start+h.nb*h.w);for(var i=0;i<h.nb;i++)ymax=Math.max(ymax,h.counts[i]/h.w);});xlo=Math.min(xlo,-.1);xhi=Math.max(xhi,.1);ymax*=1.1;
+  var X=function(lv){return F.l+(lv-xlo)/(xhi-xlo)*(F.r-F.l);},Y=function(v){return F.b-v/ymax*(F.b-F.t);};
+  var xt=logTicks(xlo,xhi);if(xt.length>5)xt=xt.filter(function(v){return Math.abs(v-Math.round(v))<1e-9;});
+  grid(ctx,F,thinX(xt.map(function(v){return [X(v),money(Math.pow(10,v))];}),50),[],'','density');
+  vline(ctx,F,X(0),'rgba(234,255,244,.6)','start',[3,3],26);
+  hs.forEach(function(h,s){ctx.strokeStyle=CCOL[s];ctx.lineWidth=s===1?2.6:1.9;ctx.beginPath();for(var i=0;i<h.nb;i++){var x0=X(h.start+i*h.w),x1=X(h.start+(i+1)*h.w),y=Y(h.counts[i]/h.w);if(i)ctx.lineTo(x0,y);else ctx.moveTo(x0,y);ctx.lineTo(x1,y);}ctx.stroke();});
+  $('cKeys').innerHTML=CNAME.map(function(n,i){return '<span><i class="ln" style="background:'+CCOL[i]+'"></i>'+n+'</span>';}).join('');
+  $('cTable').innerHTML='<thead><tr><th>Bettor</th><th>Games bet</th><th>Median</th><th class="hm">Mean</th><th>Chance up</th><th class="hm">Sat at start</th><th>Ever at half</th></tr></thead><tbody>'+CAL.res.map(function(r,i){var s=r.stats;return '<tr><td><span class="nm"><span class="chip sm" style="background:'+CCOL[i]+'"></span>'+CNAME[i]+'</span></td><td>'+pct(s.taken,0)+'</td><td class="'+(s.median>=1?'pos':'neg')+'">'+money(s.median)+'</td><td class="hm">'+money(s.mean)+'</td><td>'+pct(s.up,0)+'</td><td class="hm">'+pct(s.flat,0)+'</td><td>'+pct(s.d50,0)+'</td></tr>';}).join('')+'</tbody>';
+  var f=CAL.res[1].stats,h=CAL.res[2].stats,o=CAL.res[0].stats;
+  $('s4take').innerHTML='With slope '+C.s.toFixed(2)+' your Brier score is only <b>'+(a.me.brier-a.ref.brier).toFixed(5)+'</b> worse than a calibrated model, yet full Kelly on it turns a calibrated median of '+money(a.rF)+' into <b>'+money(a.mF)+'</b>. The best size on this model is about <b>'+a.best.toFixed(2)+'x</b> Kelly. Simulated: full Kelly ends ahead '+pct(f.up,0)+' of the time, half Kelly '+pct(h.up,0)+', the bettor who knows the truth '+pct(o.up,0)+'. For one bet, unbiased noise is free on average because growth is linear in p; once you pick games by your model, noise becomes bias. Try the noise slider with slope 1.';}
+
+/* ===== section 5: risk desk ===== */
+function readBook(){var g=function(id,d){var v=+$(id).value;return isFinite(v)?v:d;};var A=g('bkA',-110);if(!isFinite(decOf(A))){A=-110;$('bkA').value=A;}
+  return {A0:A,G:Math.round(Math.min(2000,Math.max(50,g('bkG',800)))),S:Math.round(Math.min(2000,Math.max(50,g('bkS',400)))),nRec:Math.max(0,g('bkNR',500)),recMean:Math.max(1,g('bkRM',50)),recSig:1,
+    M:Math.round(Math.min(200,Math.max(0,g('bkM',25)))),p:Math.min(.99,Math.max(.01,g('bkP',55)/100)),bank:Math.max(100,g('bkW',25000)),kf:Math.min(1,Math.max(.05,g('bkK',.5))),
+    L:Math.max(1,g('bkL',2500)),nL:Math.max(1,g('bkN',50)),th:g('bkX',1)/100,Y:Math.max(1,g('bkY',100)),kc:Math.max(0,g('bkC',1)),X:Math.max(1,g('bkXm',5000)),sd:Math.max(0,g('bkSd',2.5))/100,rule:true};}
+var BKIN=null;
+function runBook(){BKIN=readBook();jobId++;$('bkStatus').textContent='Running seasons 0%';post(Object.assign({kind:'book',id:jobId,seed:S.seed},BKIN));}
+$('bkRun').addEventListener('click',runBook);
+document.querySelectorAll('#s5 input').forEach(function(el){el.addEventListener('change',runBook);});
+function renderBook(){if(!BOOK)return;var B=BOOK,I=BKIN,D0=decOf(I.A0),theo=1-D0/2;
+  $('bkBig').innerHTML=[['Theoretical hold at '+amStr(D0)+' both sides',pct(theo,2)],['Realized hold: your rules / no limits',pct(B.holdA,2)+' / '+pct(B.holdB,2)],['Median season P&L: rules / none',usd(B.totAMed)+' / '+usd(B.totBMed)],
+    ['Chance the book loses the season',pct(B.lossA,0)+' / '+pct(B.lossB,0)],['Sharps limited by season end',pct(B.limited,0)],['Sharp edge at the opening price',spct(I.p*D0-1,1)]].map(function(k){return '<div class="stat"><small>'+k[0]+'</small><b>'+k[1]+'</b></div>';}).join('');
+  var K=B.K,cpT=B.cpT,c=canv('bkFan'),ctx=c.ctx,F=frm(c,{l:c.w<460?54:62}),lo=Infinity,hi=-Infinity;
+  for(var k=0;k<=K;k++){lo=Math.min(lo,B.qa[0][k],B.qbMed[k]);hi=Math.max(hi,B.qa[4][k],B.qbMed[k]);}var pad=(hi-lo)*.06||1;lo-=pad;hi+=pad;
+  var X=function(g){return F.l+g/I.G*(F.r-F.l);},Y=function(v){return F.b-(v-lo)/(hi-lo)*(F.b-F.t);};
+  grid(ctx,F,thinX(linTicks(0,I.G,4).map(function(g){return [X(g),g+''];}),40),linTicks(lo,hi,4).map(function(v){return [Y(v),usd(v)];}),'game #','');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();
+  function band(a,b,al){ctx.fillStyle=rgba('#f7c948',al);ctx.beginPath();for(var k=0;k<=K;k++){var x=X(cpT[k]),y=Y(a[k]);if(k)ctx.lineTo(x,y);else ctx.moveTo(x,y);}for(k=K;k>=0;k--)ctx.lineTo(X(cpT[k]),Y(b[k]));ctx.closePath();ctx.fill();}
+  band(B.qa[0],B.qa[4],.14);band(B.qa[1],B.qa[3],.28);
+  ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(0));ctx.lineTo(F.r,Y(0));ctx.stroke();ctx.setLineDash([]);
+  ctx.lineWidth=2.6;ctx.strokeStyle=COL.gold;polyline(ctx,cpT.map(function(g,k){return [g,B.qa[2][k]];}),X,Y);ctx.strokeStyle='#ff4d6d';ctx.lineWidth=2.2;polyline(ctx,cpT.map(function(g,k){return [g,B.qbMed[k]];}),X,Y);ctx.restore();
+  // split bars
+  var c2=canv('bkSplit'),x2=c2.ctx,F2=frm(c2,{l:c2.w<460?54:62,b:44}),bars=[['Recs',B.recMed,'#3dff8f'],['Sharps, rules',B.shAMed,'#f7c948'],['Sharps, no limits',B.shBMed,'#ff4d6d'],['Book, rules',B.totAMed,'#f7c948'],['Book, no limits',B.totBMed,'#ff4d6d']];
+  var mn=Math.min(0,Math.min.apply(null,bars.map(function(b){return b[1];}))),mx=Math.max(0,Math.max.apply(null,bars.map(function(b){return b[1];})));var pd=(mx-mn)*.08||1;mn-=pd;mx+=pd;
+  var Y2=function(v){return F2.b-(v-mn)/(mx-mn)*(F2.b-F2.t);},bw=(F2.r-F2.l)/bars.length;
+  grid(x2,F2,[],linTicks(mn,mx,4).map(function(v){return [Y2(v),usd(v)];}),'','');
+  x2.strokeStyle='rgba(234,255,244,.5)';x2.beginPath();x2.moveTo(F2.l,Y2(0));x2.lineTo(F2.r,Y2(0));x2.stroke();
+  bars.forEach(function(br,i){var x=F2.l+bw*i+bw*.18,w=bw*.64;x2.fillStyle=i>=3?rgba(br[2],.55):br[2];x2.fillRect(x,Math.min(Y2(br[1]),Y2(0)),w,Math.abs(Y2(br[1])-Y2(0)));
+    x2.save();x2.font='10px '+MONO;x2.fillStyle=COL.muted;x2.textAlign='center';x2.textBaseline='top';var parts=br[0].split(', ');x2.fillText(parts[0],x+w/2,F2.b+5);if(parts[1])x2.fillText(parts[1],x+w/2,F2.b+18);x2.restore();});
+  // sharp bankroll
+  var c3=canv('bkSharp'),x3=c3.ctx,F3=frm(c3,{l:c3.w<460?54:62}),vals=[];for(k=0;k<=K;k++)vals.push(B.bankA[k],B.bankB[k]);var l3=Math.min.apply(null,vals),h3=Math.max.apply(null,vals),p3=(h3-l3)*.08||1;l3-=p3;h3+=p3;
+  var X3=function(g){return F3.l+g/I.G*(F3.r-F3.l);},Y3=function(v){return F3.b-(v-l3)/(h3-l3)*(F3.b-F3.t);};
+  grid(x3,F3,thinX(linTicks(0,I.G,4).map(function(g){return [X3(g),g+''];}),40),linTicks(l3,h3,4).map(function(v){return [Y3(v),usd(v)];}),'game #','');
+  x3.lineWidth=2.6;x3.strokeStyle='#ff4d6d';polyline(x3,cpT.map(function(g,k){return [g,B.bankB[k]];}),X3,Y3);x3.strokeStyle=COL.gold;polyline(x3,cpT.map(function(g,k){return [g,B.bankA[k]];}),X3,Y3);
+  var gain=B.shBMed-B.shAMed;
+  $('s5take').innerHTML='Recs pay the book about <b>'+usd(B.recMed)+'</b> a season. Unlimited Kelly sharps take back <b>'+usd(-B.shBMed)+'</b>, and their cost keeps growing because their stakes grow with their bankrolls. With a $'+I.L.toLocaleString('en-US')+' max and a cut to $'+I.Y.toLocaleString('en-US')+' after '+I.nL+' bets of CLV above '+(I.th*100).toFixed(1)+'%, sharps cost <b>'+usd(-B.shAMed)+'</b> and their bankrolls go from compounding to a straight line. Realized hold moves from '+pct(B.holdB,2)+' to '+pct(B.holdA,2)+' against a theoretical '+pct(theo,2)+'.';}
+
+/* ===== section 6: correlated slate ===== */
+function Phi(x){var t=1/(1+0.2316419*Math.abs(x)),d=0.3989422804014327*Math.exp(-x*x/2),pr=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return x>0?1-pr:pr;}
+function PhiInv(p){var a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239],b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572],c=[-0.007784894002430293,-0.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783],d=[0.007784695709041462,0.3224671290700398,2.445134137142996,3.754408661907416],pl=0.02425,q,r;
+  if(p<pl){q=Math.sqrt(-2*Math.log(p));return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  if(p>1-pl){q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  q=p-.5;r=q*q;return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}
+var MQ=(function(){var xs=[],ws=[],n=61,sum=0;for(var i=0;i<n;i++){var x=-5+10*i/(n-1),w=Math.exp(-x*x/2);xs.push(x);ws.push(w);sum+=w;}return {x:xs,w:ws.map(function(w){return w/sum;})};})();
+function slateG(n,f,p,b){p=Math.min(1-1e-12,Math.max(1e-12,p));var s=0,lp=Math.log(p),lq=Math.log(1-p);lfac(n);for(var k=0;k<=n;k++){var x=1+f*(k*b-(n-k)),pr=Math.exp(LF[n]-LF[k]-LF[n-k]+k*lp+(n-k)*lq);if(x<=0){if(pr>1e-300)return -Infinity;continue;}s+=pr*Math.log(x);}return s;}
+function slateGc(n,f,p,b,rho){if(rho<=1e-9)return slateG(n,f,p,b);var c=PhiInv(p),sr=Math.sqrt(rho),s1=Math.sqrt(1-rho),tot=0;for(var i=0;i<MQ.x.length;i++){var g=slateG(n,f,Phi((c-sr*MQ.x[i])/s1),b);if(g===-Infinity)return -Infinity;tot+=MQ.w[i]*g;}return tot;}
+function slateOpt(n,p,b,rho){var lo=0,hi=.999/n,gr1=(Math.sqrt(5)-1)/2,a=hi-gr1*(hi-lo),c=lo+gr1*(hi-lo),fa=slateGc(n,a,p,b,rho),fc=slateGc(n,c,p,b,rho);
+  for(var it=0;it<40;it++){if(fa>fc){hi=c;c=a;fc=fa;a=hi-gr1*(hi-lo);fa=slateGc(n,a,p,b,rho);}else{lo=a;a=c;fa=fc;c=lo+gr1*(hi-lo);fc=slateGc(n,c,p,b,rho);}}
+  var f=(lo+hi)/2,g=slateGc(n,f,p,b,rho);if(g<=0){f=0;g=0;}return {f:f,g:g,pinned:f>.999/n*.985};}
+$('slN').addEventListener('input',function(){$('slOut').textContent=this.value;renderSlate();});
+$('slR').addEventListener('input',function(){$('slROut').textContent=(+this.value).toFixed(2);renderSlate();});
+function renderSlate(){var n=+$('slN').value,rho=+$('slR').value,b=bNow(),p=S.p,fs=fStar(),T=S.T,slates=T/n;
+  if(!(fs>0)){noEdgeMsg('slate','No edge: nothing to size.');noEdgeMsg('slExp','');$('slBig').innerHTML='';$('slText').textContent='';return;}
+  var opt=slateOpt(n,p,b,rho),opt0=slateOpt(n,p,b,0),fmax=Math.min(.999/n,Math.max(2.2*Math.max(fs,opt0.f),.01)),pts=[],vals=[];
+  for(var i=0;i<=120;i++){var f=fmax*i/120,v=Math.max(1e-3,Math.exp(slates*slateGc(n,f,p,b,rho))),v0=Math.max(1e-3,Math.exp(slates*slateG(n,f,p,b)));pts.push([f,v,v0]);vals.push(v,v0);}
+  var c=canv('slate'),ctx=c.ctx,F=frm(c),lr=logRange(vals),llo=lr[0],lhi=lr[1];
+  var X=function(f){return F.l+f/fmax*(F.r-F.l);},Y=function(v){return F.b-(Math.log10(Math.max(v,1e-3))-llo)/(lhi-llo)*(F.b-F.t);};
+  grid(ctx,F,thinX(linTicks(0,fmax*100,5).map(function(v){return [X(v/100),(+v.toFixed(2))+'%'];}),44),moneyTicks(llo,lhi,Y),'stake per game','');
+  ctx.save();ctx.beginPath();ctx.rect(F.l,F.t,F.r-F.l,F.b-F.t);ctx.clip();ctx.strokeStyle='rgba(234,255,244,.35)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(F.l,Y(1));ctx.lineTo(F.r,Y(1));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(234,255,244,.45)';ctx.lineWidth=1.8;polyline(ctx,pts.map(function(q){return [q[0],q[2]];}),X,Y);ctx.strokeStyle=COL.gain;ctx.lineWidth=2.6;polyline(ctx,pts.map(function(q){return [q[0],q[1]];}),X,Y);ctx.restore();
+  pill(ctx,'median after '+T.toLocaleString('en-US')+' bets',F.l+6,F.t+5,'rgba(234,255,244,.75)','left');
+  vline(ctx,F,X(fs),'#ff3b5c','single game Kelly',[3,3],26);vline(ctx,F,X(opt.f),COL.gold,'best here',[],46);
+  // exposure vs rho
+  var rhos=[0,.1,.2,.3,.4,.5,.6,.7,.8],ex=rhos.map(function(r){return [r,n*slateOpt(n,p,b,r).f];});
+  var c2=canv('slExp'),x2=c2.ctx,F2=frm(c2,{l:c2.w<460?44:50}),ymx=Math.max(.05,ex[0][1]*1.15),X2=function(r){return F2.l+r/.8*(F2.r-F2.l);},Y2=function(v){return F2.b-v/ymx*(F2.b-F2.t);};
+  grid(x2,F2,rhos.filter(function(r,i){return i%2===0;}).map(function(r){return [X2(r),r.toFixed(1)];}),linTicks(0,ymx,4).map(function(v){return [Y2(v),Math.round(v*100)+'%'];}),'correlation','');
+  x2.strokeStyle=COL.gain;x2.lineWidth=2.4;polyline(x2,ex,X2,Y2);x2.fillStyle=COL.gold;x2.beginPath();x2.arc(X2(rho),Y2(n*opt.f),5,0,7);x2.fill();
+  var naiveOK=n*fs<1,medN=naiveOK?Math.exp(slates*slateGc(n,fs,p,b,rho)):0,medB=Math.exp(slates*opt.g);
+  $('slBig').innerHTML='<div class="stat"><small>Best stake per game</small><b>'+pct(opt.f,2)+'</b></div><div class="stat"><small>Best total exposure</small><b>'+pct(opt.f*n,1)+'</b></div><div class="stat"><small>Single game Kelly x '+n+'</small><b class="'+(naiveOK?'':'neg')+'">'+pct(fs*n,1)+'</b></div>'+
+    '<div class="stat"><small>Median, best sizing</small><b>'+money(medB)+'</b></div><div class="stat"><small>Median, single game Kelly each</small><b class="'+(medN<medB*.8?'neg':'')+'">'+(naiveOK?money(medN):'bust risk')+'</b></div><div class="stat"><small>Exposure if independent</small><b>'+pct(opt0.f*n,1)+'</b></div>';
+  var t='';
+  if(opt.pinned)t='<span class="warn">The optimum is pinned at the 100% exposure bound. The model wants to put nearly everything on the slate, which only holds if the games truly never move together. Treat this as a warning, not advice.</span> ';
+  if(rho<=1e-9)t+=Math.abs(opt.f-fs)/fs<.1?'With independent games, single game Kelly on each is close to right ('+pct(opt.f,2)+' vs '+pct(fs,2)+'). Slide correlation up.':'Even with independent games, stacking single game Kelly ('+pct(fs,2)+' each) overshoots; the best is '+pct(opt.f,2)+'. Slide correlation up.';
+  else t+='At correlation '+rho.toFixed(2)+' the right total exposure falls from <b>'+pct(opt0.f*n,0)+'</b> to <b>'+pct(opt.f*n,0)+'</b>. Betting single game Kelly on every game here '+(naiveOK?'gives a median of '+money(medN)+' vs '+money(medB)+'.':'risks the whole bankroll on one bad Sunday.');
+  $('slText').innerHTML=t;}
+
+/* ===== section 7: parlays ===== */
+function renderParlay(){var p=S.p,D=decOf(S.odds),b=D-1,fs=fStar(),g1=gr(fs,p,b),rows=[],T=S.T;
+  for(var k=1;k<=6;k++){var P=Math.pow(p,k),Dk=Math.pow(D,k),bk=Dk-1,ev=P*Dk-1,f=kelly(P,bk),gk=gr(f,P,bk),hold=1-Math.pow(.5*D,k);rows.push({k:k,P:P,Dk:Dk,ev:ev,f:f,gk:gk,eff:g1>0?(gk/k)/g1:NaN,med:Math.exp(T/k*gk),hold:hold});}
+  $('parTable').innerHTML='<thead><tr><th>Legs</th><th>Hits</th><th>Pays</th><th>Your EV</th><th class="hm">Kelly stake</th><th>Growth per game vs straight</th><th>Book hold, 50/50 legs</th><th class="hm">Median using '+T.toLocaleString('en-US')+' games</th></tr></thead><tbody>'+
+    rows.map(function(r){return '<tr><td>'+(r.k===1?'Straight':r.k+' leg')+'</td><td>'+pct(r.P,1)+'</td><td>'+amStr(r.Dk)+'</td><td class="'+(r.ev>=0?'pos':'neg')+'">'+spct(r.ev,1)+'</td><td class="hm">'+pct(r.f,2)+'</td><td>'+(isFinite(r.eff)?pct(r.eff,0):'n/a')+'</td><td>'+(r.hold>0?pct(r.hold,1):'none')+'</td><td class="hm">'+money(r.med)+'</td></tr>';}).join('')+'</tbody>';
+  var c=canv('parChart'),ctx=c.ctx,half=(c.w-10)/2;
+  function panel(x0,vals,color,ymin,ymax,fmt){var F={l:x0+(c.w<460?40:48),r:x0+half-8,t:14,b:c.h-30,w:c.w},Y=function(v){return F.b-(v-ymin)/(ymax-ymin)*(F.b-F.t);},bw=(F.r-F.l)/6;
+    grid(ctx,F,vals.map(function(v,i){return [F.l+bw*(i+.5),(i+1)+''];}),linTicks(ymin,ymax,4).map(function(v){return [Y(v),fmt(v)];}),'legs','');
+    vals.forEach(function(v,i){if(!isFinite(v))return;var x=F.l+bw*i+bw*.2,w=bw*.6;ctx.fillStyle=color;ctx.fillRect(x,Math.min(Y(v),Y(0)),w,Math.abs(Y(0)-Y(v)));});}
+  var evs=rows.map(function(r){return r.ev;}),ef=rows.map(function(r){return r.eff;}),emin=Math.min(0,Math.min.apply(null,evs)),emax=Math.max(.02,Math.max.apply(null,evs));
+  panel(0,evs,COL.gold,emin*1.1,emax*1.1,function(v){return Math.round(v*100)+'%';});
+  panel(half+10,ef,COL.gain,Math.min(0,Math.min.apply(null,ef.filter(isFinite).concat([0]))),1.05,function(v){return Math.round(v*100)+'%';});
+  var r2=rows[1],r3=rows[2];
+  $('s7take').innerHTML=(fs>0?'A 2 leg parlay has <b>'+spct(r2.ev,1)+'</b> EV vs '+spct(rows[0].ev,1)+' straight, but grows your bankroll only <b>'+pct(r2.eff,0)+'</b> as fast per game you have an edge on (3 legs: '+pct(r3.eff,0)+'). Higher EV, slower compounding. ':'With no edge, parlays multiply the house edge: a 3 leg parlay here has '+spct(r3.ev,1)+' EV. ')+
+    'From the book side, a bettor with no edge pays a hold of <b>'+(rows[3].hold>0?pct(rows[3].hold,1):'none')+'</b> on a 4 leg parlay at these odds. Same game parlays are where books earn even more: the legs are correlated, so books price them off a correlation model instead of multiplying, and the bettor cannot easily check the math.';}
+
+/* ===== section 8: CLV ===== */
+var CLVM='mult';
+function devig(pa,pb,m){var s=pa+pb;if(m==='mult')return pa/s;if(m==='add')return pa-(s-1)/2;
+  if(m==='pow'){var lo=.1,hi=10;for(var i=0;i<80;i++){var k=(lo+hi)/2,v=Math.pow(pa,k)+Math.pow(pb,k);if(v>1)lo=k;else hi=k;}return Math.pow(pa,(lo+hi)/2);}
+  var sh=function(z,q){return (Math.sqrt(z*z+4*(1-z)*q*q/s)-z)/(2*(1-z));},zl=0,zh=.49;
+  if(s<=1)return pa/s;for(i=0;i<80;i++){var z=(zl+zh)/2;if(sh(z,pa)+sh(z,pb)>1)zl=z;else zh=z;}return sh((zl+zh)/2,pa);}
+segBind('clvM','v',function(v){CLVM=v;renderCLV();});
+function renderCLV(){var bet=+$('clvBet').value,own=+$('clvOwn').value,oth=+$('clvOth').value,sd=Math.max(.001,(+$('clvSd').value||2.5)/100),Db=decOf(bet),Da=decOf(own),Dc=decOf(oth);
+  if(!isFinite(Db)||!isFinite(Da)||!isFinite(Dc)){$('clvBig').innerHTML='';$('clvTable').innerHTML='';$('clvText').innerHTML='<span class="warn">Enter American odds of 100 or more, or −100 or less.</span>';return null;}
+  var pa=1/Da,pb=1/Dc,over=pa+pb,hold=1-1/over,BE=1/Db,meth=[['mult','Multiplicative'],['add','Additive'],['pow','Power'],['shin','Shin']];
+  var rows=meth.map(function(m){var nv=devig(pa,pb,m[0]);return {k:m[0],name:m[1],nv:nv,edge:nv*Db-1,kel:kelly(nv,Db-1)};}),sel=rows.filter(function(r){return r.k===CLVM;})[0];
+  var d=sel.nv-BE,nRes=d>0?Math.pow(2*Math.sqrt(BE*(1-BE))/d,2):Infinity,nClv=d>0?Math.pow(2*sd/d,2):Infinity;
+  $('clvBig').innerHTML=[['Breakeven at your price',pct(BE,2)],['Overround (sum of implied)',pct(over-1,2)],['Hold (book margin)',pct(hold,2)],['Fair chance, '+sel.name.toLowerCase(),pct(sel.nv,2)],['Implied edge at your price',spct(sel.edge,2)],['Kelly stake at that edge',pct(sel.kel,2)],
+    ['Bets to prove it by results (2 sigma)',isFinite(nRes)?Math.round(nRes).toLocaleString('en-US'):'never'],['Bets to prove it by CLV (2 sigma)',isFinite(nClv)?Math.max(1,Math.round(nClv)).toLocaleString('en-US'):'never']].map(function(k){return '<div class="stat"><small>'+k[0]+'</small><b>'+k[1]+'</b></div>';}).join('');
+  $('clvTable').innerHTML='<thead><tr><th>Devig method</th><th>Fair chance</th><th>Fair price</th><th>Edge</th><th>Kelly</th></tr></thead><tbody>'+rows.map(function(r){return '<tr class="'+(r.k===CLVM?'sel':'')+'"><td>'+r.name+'</td><td>'+pct(r.nv,2)+'</td><td>'+amStr(1/r.nv)+'</td><td class="'+(r.edge>=0?'pos':'neg')+'">'+spct(r.edge,2)+'</td><td>'+pct(r.kel,2)+'</td></tr>';}).join('')+'</tbody>';
+  $('clvText').innerHTML=(sel.edge>0?'You bet '+amStr(Db)+' and the fair close was '+amStr(1/sel.nv)+', an edge of about <b>'+spct(sel.edge,1)+'</b>. ':'You got a worse price than the fair close, so this bet had <b>'+spct(sel.edge,1)+'</b> and Kelly says pass. ')+
+    (d>0?'Proving a '+(d*100).toFixed(2)+' point win rate edge from wins and losses takes about <b>'+Math.round(nRes).toLocaleString('en-US')+'</b> bets, because each result is a coin flip with a standard deviation near 50 points. Closing prices move only about '+(sd*100).toFixed(1)+' points per bet, so CLV gets there in about <b>'+Math.max(1,Math.round(nClv)).toLocaleString('en-US')+'</b>. That is why books flag sharps by CLV long before their results are clear.':'');
+  return sel.nv;}
+['clvBet','clvOwn','clvOth','clvSd'].forEach(function(id){$(id).addEventListener('input',renderCLV);});
+$('clvUse').addEventListener('click',function(){var nv=renderCLV();if(nv===null||nv===undefined)return;var bet=+$('clvBet').value;S.odds=bet;$('oddsIn').value=bet;S.p=nv;syncPInput();markPreset('');H.bel=nv;H.tru=Math.max(nv-.02,1/decOf(bet)-0.01);syncHmSliders();runMain();
+  $('controls').scrollIntoView({behavior:RM?'auto':'smooth',block:'start'});});
+
+/* ===== orchestration ===== */
+function renderAnalytic(){syncHmSliders();renderS1();renderSlate();renderParlay();renderCLV();renderCalAnalytic();if(!MAIN)renderChips();}
+function renderMain(animate){if(!MAIN||!META)return;renderChips();renderKPIs();renderRace(animate);renderFan();renderHist();renderScore();renderS2Take();renderDD();renderS3Take(renderGrowth());}
+function renderAll(){renderMain(false);renderS1();renderSlate();renderParlay();renderCal();renderBook();}
+var rzT=null,lastW=window.innerWidth;window.addEventListener('resize',function(){if(window.innerWidth===lastW)return;lastW=window.innerWidth;clearTimeout(rzT);rzT=setTimeout(renderAll,150);});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(MAIN)renderAll();});
+syncPInput();renderDerived();runMain();
+</script>
+</body>
+</html>
