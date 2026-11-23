@@ -1,0 +1,40 @@
+name: Trade Lab daily collector
+
+on:
+  schedule:
+    - cron: '23 9 * * *'   # daily, about 4:23 AM Eastern
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trade-lab-collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refresh DynastyProcess weekly history
+        run: |
+          git clone -q --filter=blob:none --no-checkout https://github.com/dynastyprocess/data /tmp/dp
+          python tools/build_dp_history.py /tmp/dp trade-lab/data/dp-history.json
+      - name: Collect trades and value snapshots
+        env:
+          LEAGUES_PER_RUN: '250'
+        run: python tools/collect.py
+      - name: Commit data
+        run: |
+          git config user.name 'trade-lab-bot'
+          git config user.email 'trade-lab-bot@users.noreply.github.com'
+          git add trade-lab/data
+          git diff --cached --quiet && exit 0
+          git commit -m "Trade Lab data $(date -u +%F)"
+          git pull --rebase -q
+          git push
