@@ -375,14 +375,14 @@ const rankOf=(val,arr)=>1+arr.filter(x=>x>val+1e-6).length;
 async function loadLeague(lid,tok){
  setStatus('Loading league…');
  const[lg,rosters,users,traded,drafts,state]=await Promise.all([api('league/'+lid),api(`league/${lid}/rosters`),api(`league/${lid}/users`),api(`league/${lid}/traded_picks`),api(`league/${lid}/drafts`),api('state/nfl')]);
- if(tok!==S.tok)throw new Error('stale');
+ if(tok!==S.loadTok)throw new Error('stale');
  S.lg=lg;S.state=state;S.drafts=drafts;S.traded=traded;S.rawRosters=rosters;S.users=Object.fromEntries(users.map(u=>[u.user_id,u]));
  const rp=lg.roster_positions||[];
  const ov=store.get('fmt:'+lid,null);
  S.f=ov||{qbs:rp.includes('SUPER_FLEX')||rp.filter(x=>x==='QB').length>1?2:1,ppr:(lg.scoring_settings?.rec??1)>=.75?1:(lg.scoring_settings?.rec??1)>=.25?.5:0,
   tep:lg.scoring_settings?.bonus_rec_te||0,teams:Math.min(16,Math.max(8,lg.total_rosters||12)),dynasty:(lg.settings?.type??0)>=1};
  S.slots=rp.filter(s=>ELIG[s]).sort((a,b)=>ELIG[a].length-ELIG[b].length);S.demand=demand();
- await loadPlayers();await loadSources();if(tok!==S.tok)throw new Error('stale');
+ await loadPlayers();await loadSources();if(tok!==S.loadTok)throw new Error('stale');
  buildModel();setStatus('')}
 
 function buildModel(){
@@ -451,7 +451,7 @@ async function loadHistory(tok){
     const faab=(tx.waiver_budget||[]).filter(f=>f.receiver===rid).reduce((s,f)=>s+f.amount,0);
     return{rid,owner,mgr:u.display_name||('Team '+rid),name:u.metadata?.team_name||'',avatar:u.avatar,got,faab}});
    trades.push({id:tx.transaction_id,t:tx.created||tx.status_updated,season:L.season,sides})}}));
- if(tok!==S.tok)throw new Error('stale');
+ if(tok!==S.loadTok)throw new Error('stale');
  const uniq=new Map();for(const t of trades)uniq.set(t.id,t);
  S.hist={trades:[...uniq.values()].sort((a,b)=>b.t-a.t),draftMap,drafted,startup,seasons:chain.map(l=>l.season)};
  valueHistory();applyHabits()}
@@ -563,13 +563,13 @@ $('#leagueSel').addEventListener('change',e=>openLeague(e.target.value));
 $('#meSel').addEventListener('change',e=>{S.myRid=+e.target.value;S.odds=simOdds();for(const t of S.teams)t.window=t.autoWindow;applyMyWindow();resetCalc();renderAll()});
 
 async function openLeague(lid){
- const tok=S.tok=(S.tok||0)+1;
+ const tok=S.loadTok=(S.loadTok||0)+1;
  try{store.set('league',lid);S.myRid=null;S.hist=null;await loadLeague(lid,tok);resetCalc();
   $('#meSel').innerHTML=S.teams.map(t=>`<option value="${t.rid}">Viewing as ${esc(t.mgr)}</option>`).join('');$('#meSel').value=S.myRid;$('#meSel').hidden=false;
-  try{await loadSchedule();S.odds=simOdds()}catch(e){console.warn(e);S.sched=null;S.odds=null}if(tok!==S.tok)return;
+  try{await loadSchedule();S.odds=simOdds()}catch(e){console.warn(e);S.sched=null;S.odds=null}if(tok!==S.loadTok)return;
   renderAll();if(!location.hash)location.hash='#league';
   $('#logBody').innerHTML='<div class="card empty"><h3><span class="loading"></span> Loading every season of trades</h3><p>Following the league back through each season and pricing every deal at the time and today.</p></div>';
-  await loadHistory(tok);if(tok===S.tok)renderAll()}catch(err){if(err.message==='stale')return;setStatus('');toast(err.message);console.error(err)}}
+  await loadHistory(tok);if(tok===S.loadTok){renderAll();if(S.tok)loadMine()}}catch(err){if(err.message==='stale')return;setStatus('');toast(err.message);console.error(err)}}
 
 function renderAll(){renderSlp();renderChips();renderLeague();renderCalcTeams();renderCalc();renderFinderSetup();renderMarket();renderRookies();renderLog()}
 
@@ -851,7 +851,7 @@ function txSides(tx){const me=S.myRid,uid=S.user?.user_id;const other=(tx.roster
  let faabIn=0,faabOut=0;for(const f of tx.waiver_budget||[]){let fr,to,amt;if(typeof f==='string'){[fr,to,amt]=f.split(',').map(Number)}else{fr=f.sender;to=f.receiver;amt=f.amount}if(to===me)faabIn+=amt;else if(fr===me)faabOut+=amt}
  return{other:S.byRid[other],get,give,faabIn,faabOut,mine:String(tx.creator)===String(uid)}}
 function renderMine(){const box=$('#mineBody');if(!box)return;
- if(!S.lg){box.innerHTML='<div class="card empty"><h3>No league loaded</h3></div>';return}
+ if(!S.lg){box.innerHTML=store.get('user')?'<div class="card empty"><h3><span class="loading"></span> Loading your league</h3></div>':'<div class="card empty"><h3>No league loaded</h3><p>Enter your Sleeper username at the top.</p></div>';return}
  if(!S.tok){box.innerHTML=`<div class="card empty"><h3>Connect Sleeper to manage trades here</h3><p>See every pending offer, send, withdraw and decline without opening Sleeper.</p><button class="btn mint" id="mineConnect">Connect Sleeper</button></div>`;$('#mineConnect').addEventListener('click',openConnect);return}
  if(mineErr){box.innerHTML=`<div class="card empty"><h3>Could not load trades</h3><p>${esc(mineErr)}</p><button class="btn" id="mineRetry">Try again</button> <button class="btn" id="mineRe">Reconnect</button></div>`;$('#mineRetry').addEventListener('click',loadMine);$('#mineRe').addEventListener('click',openConnect);return}
  if(!mine){box.innerHTML='';return}
