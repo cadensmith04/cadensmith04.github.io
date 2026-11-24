@@ -127,6 +127,9 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--l
 .loading{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .tv{display:flex;gap:6px;align-items:baseline;justify-content:flex-end;white-space:nowrap;font-variant-numeric:tabular-nums}.tv small{color:var(--mute);font-size:11.5px}
+.vrow{display:grid;grid-template-columns:150px minmax(0,1fr) 92px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}.vrow:first-of-type{border-top:0}
+.vbar{position:relative;height:14px;border-radius:7px;background:var(--bg2)}.vbar::after{content:'';position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--mute)}.vbar i{position:absolute;top:0;bottom:0;border-radius:7px}
+@media(max-width:600px){.vrow{grid-template-columns:96px minmax(0,1fr) 70px}}
 .bar2{height:8px;border-radius:6px;background:var(--line);overflow:hidden;display:flex}.bar2 i{display:block;height:100%}
 .banner{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;border-radius:14px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--line);background:var(--card)}
 .banner.closed{border-color:rgba(255,182,72,.5);background:rgba(255,182,72,.08)}.banner.urgent{border-color:var(--mint);background:rgba(0,212,180,.08)}
@@ -180,6 +183,7 @@ footer a{color:#c4cde0}
    <div class="card verdict" id="verdict"></div>
    <div class="card side"><h3>You get</h3><select class="field" id="teamB" aria-label="Trade partner"></select><div class="picker"><input id="pickB" placeholder="Add player or pick" autocomplete="off"><div class="dd" id="ddB"></div></div><ul class="assets" id="listB"></ul><div class="tot"><span>Total</span><span class="num" id="totB">0</span></div></div>
   </div>
+  <div class="card intel" id="views" hidden></div>
   <div class="card intel" id="intel" hidden></div>
  </section>
 
@@ -223,6 +227,7 @@ footer a{color:#c4cde0}
      <label>RosterAudit (Sleeper trades) <span id="wRaV"></span><input type="range" id="wRa" min="0" max="100" step="5"></label>
      <label>FantasyCalc (trades across sites) <span id="wFcV"></span><input type="range" id="wFc" min="0" max="100" step="5"></label>
      <label>DynastyProcess (expert consensus) <span id="wDpV"></span><input type="range" id="wDp" min="0" max="100" step="5"></label>
+     <label>Dynasty Dealer (672k+ Sleeper trades) <span id="wDdV"></span><input type="range" id="wDd" min="0" max="100" step="5"></label>
     </div>
     <h3 style="font-size:24px;margin:18px 0 6px">Finder rules</h3>
     <div class="controls">
@@ -254,7 +259,7 @@ footer a{color:#c4cde0}
   </div>
  </section>
 </main>
-<footer><div class="wrap">Works with Sleeper leagues through Sleeper's public API. Not affiliated with or endorsed by Sleeper. Values: <a href="https://rosteraudit.com" target="_blank" rel="noopener">RosterAudit</a>, <a href="https://fantasycalc.com" target="_blank" rel="noopener">FantasyCalc</a>, <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noopener">DynastyProcess</a>. Built by <a href="../">Caden Smith</a>.</div></footer>
+<footer><div class="wrap">Works with Sleeper leagues through Sleeper's public API. Not affiliated with or endorsed by Sleeper. Values: <a href="https://rosteraudit.com" target="_blank" rel="noopener">RosterAudit</a>, <a href="https://fantasycalc.com" target="_blank" rel="noopener">FantasyCalc</a>, <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noopener">DynastyProcess</a>, <a href="https://www.dynastydealer.com" target="_blank" rel="noopener">Dynasty Dealer</a>. Built by <a href="../">Caden Smith</a>.</div></footer>
 
 <div class="ov" id="ov"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast"></div>
@@ -290,7 +295,7 @@ const tlabel=t=>t.name&&t.name!==t.mgr?`${t.mgr} · ${t.name}`:t.mgr;
 /* ---------- state ---------- */
 const S={user:null,lg:null,teams:[],byRid:{},assets:{},P:null,V:{},myRid:null,
  f:{qbs:2,teams:12,ppr:1,tep:0,dynasty:true},consol:store.get('consol',true),
- w:store.get('weights',{ra:50,fc:35,dp:15}),srcMode:store.get('srcMode','ra'),smash:store.get('smash',15)/100,floor:store.get('floor',20)/100,
+ w:Object.assign({ra:0,fc:0,dp:0,dd:0},store.get('weights',{ra:40,fc:25,dp:10,dd:25})),srcMode:store.get('srcMode','ra'),smash:store.get('smash',15)/100,floor:store.get('floor',20)/100,
  slots:[],calc:{a:'any',b:'any',give:[],get:[]},hist:null,pickSeasons:[],rankBy:'strength',src:{}};
 
 /* ---------- value sources ---------- */
@@ -299,6 +304,7 @@ async function loadPlayers(){
  S.P=await cached('players',864e5,async()=>{const raw=await api('players/nfl'),d={};
   for(const[id,p]of Object.entries(raw)){if(!['QB','RB','WR','TE','K','DEF'].includes(p.position))continue;
    d[id]={n:p.full_name||[p.first_name,p.last_name].filter(Boolean).join(' '),p:p.position,t:p.team||'FA',a:p.age,x:p.years_exp,i:p.injury_status,b:p.birth_date}}return d});return S.P}
+const SRCS=['ra','fc','dp','dd'],SRCN={ra:'RosterAudit',fc:'FantasyCalc',dp:'DynastyProcess',dd:'Dynasty Dealer'},SRCA={ra:'RA',fc:'FC',dp:'DP',dd:'DD'};
 async function loadSources(){
  const f=S.f;const fk=f.qbs===2?'sf':'oq';
  const jobs=await Promise.allSettled([
@@ -306,49 +312,69 @@ async function loadSources(){
   cached('ra:values',36e5*3,()=>getJSON('https://rosteraudit.com/wp-json/ra/v1/rankings/values')),
   cached('ra:picks',36e5*3,()=>getJSON('https://rosteraudit.com/wp-json/ra/v1/picks')),
   cached('dp:hist',36e5*12,()=>getJSON('data/dp-history.json')),
-  cached('fc:hist',36e5*6,()=>getJSON('data/fc-history.json'))]);
- const [fc,ra,rap,dp,fch]=jobs.map(j=>j.status==='fulfilled'?j.value:null);
- S.src={fc:!!fc,ra:!!ra,dp:!!dp};
+  cached('fc:hist',36e5*6,()=>getJSON('data/fc-history.json')),
+  cached(`dd:${f.qbs}:${f.tep>0}`,36e5*3,()=>getJSON(`https://www.dynastydealer.com/api/player-values?sf=${f.qbs===2}&tep=${f.tep>0}`))]);
+ const [fc,ra,rap,dp,fch,dd]=jobs.map(j=>j.status==='fulfilled'?j.value:null);
+ S.src={fc:!!fc,ra:!!ra,dp:!!dp,dd:!!dd};
  const FC={},FCP={};for(const x of fc||[]){const p=x.player;if(p.position==='PICK'){FCP[p.name]=x.value;continue}if(p.sleeperId)FC[p.sleeperId]=x}
  const RA={};if(ra)for(const[sid,v]of Object.entries(ra))if(v&&typeof v==='object'){const val=v[fk==='sf'?'sf':'1qb'];if(val!=null)RA[sid]=+val}
  const lastOf=s=>{if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null};
  const DP={};if(dp)for(const[sid,v]of Object.entries(dp.players))(()=>{const x=lastOf(v[fk]);if(x!=null)DP[sid]=x})();
+ const DD={},DDP={};for(const x of dd?.players||[]){const m=String(x.name||'').match(/^(\d{4}) Round (\d) (Early|Mid|Late)$/);if(m)DDP[`${m[1]}-${m[2]}-${m[3].toLowerCase()}`]=x.current_value;else if(x.sleeper_id)DD[x.sleeper_id]=x.current_value}
  // align every source to RosterAudit's scale (FantasyCalc's if RosterAudit is down)
  const FCv={};for(const sid in FC)FCv[sid]=FC[sid].value;const base=ra?RA:FCv;
  const k=(src)=>{if(src===base)return 1;const r=[];for(const sid in src){const a=base[sid];if(a>1500&&src[sid]>300)r.push(a/src[sid])}return r.length>20?median(r):1};
- S.kRA=1;S.kFC=k(FCv);S.kDP=k(DP);
+ S.K={ra:1,fc:k(FCv),dp:k(DP),dd:k(DD)};S.kRA=1;S.kFC=S.K.fc;S.kDP=S.K.dp;
+ // rank matching: a source's Nth best player maps to the base source's Nth best value (handles sources whose scales are shaped differently)
+ const qmap=src=>{if(src===base)return x=>x;const ids=Object.keys(src).filter(id=>base[id]!=null);if(ids.length<50)return x=>x*k(src);
+  const a=ids.map(id=>src[id]).sort((x,y)=>y-x),b=ids.map(id=>base[id]).sort((x,y)=>y-x),n=a.length;
+  return x=>{if(x>=a[0])return b[0]*x/a[0];if(x<=a[n-1])return b[n-1]*x/Math.max(a[n-1],1);let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(a[m]>=x)lo=m;else hi=m}const t=(a[lo]-x)/Math.max(a[lo]-a[hi],1e-9);return b[lo]+(b[hi]-b[lo])*t}};
+ S.Q={ra:qmap(RA),fc:qmap(FCv),dp:qmap(DP),dd:qmap(DD)};
  let mode=S.srcMode;if(mode!=='blend'&&!S.src[mode]){mode='blend';setTimeout(()=>toast('That value source is unavailable right now, using the blend'),0)}
- const MW={ra:{ra:1,fc:0,dp:0},fc:{ra:0,fc:1,dp:0},dp:{ra:0,fc:0,dp:1},blend:S.w};
- const W=f.dynasty?MW[mode]:{ra:0,fc:100,dp:0};const tep=f.tep>0?1+0.25*f.tep:1;
- S.V={};const ids=new Set([...Object.keys(FC),...Object.keys(RA),...Object.keys(DP)]);
- for(const sid of ids){const src={fc:FC[sid]?FC[sid].value*S.kFC:undefined,ra:RA[sid]!=null?RA[sid]*S.kRA:undefined,dp:DP[sid]!=null?DP[sid]*S.kDP:undefined};
-  let num=0,den=0;for(const s of['ra','fc','dp'])if(src[s]!=null&&W[s]>0){num+=W[s]*src[s];den+=W[s]}
-  if(!den)continue;const x=FC[sid];const p=x?.player;const pos=p?.position||S.P?.[sid]?.p;const m=pos==='TE'?tep:1;const v=num/den*m;
+ const MW={ra:{ra:1},fc:{fc:1},dp:{dp:1},dd:{dd:1},blend:S.w};
+ const W=f.dynasty?MW[mode]:{fc:100};const tep=f.tep>0?1+0.25*f.tep:1;S.tepM=tep;
+ const RAWP={ra:RA,fc:FCv,dp:DP,dd:DD};
+ S.V={};const ids=new Set([...Object.keys(FC),...Object.keys(RA),...Object.keys(DP),...Object.keys(DD)]);
+ for(const sid of ids){const src={};for(const s of SRCS)if(RAWP[s][sid]!=null)src[s]=S.Q[s](RAWP[s][sid]);
+  let num=0,den=0;for(const s of SRCS)if(src[s]!=null&&(W[s]||0)>0){num+=W[s]*src[s];den+=W[s]}
+  const x=FC[sid];const p=x?.player;const pos=p?.position||S.P?.[sid]?.p;const m=pos==='TE'?tep:1;
+  if(!den){if(!Object.keys(src).length)continue}
+  const v=den?num/den*m:0;
   const ratio=x&&x.value>0?Math.min(3,Math.max(.3,(x.redraftValue??x.value)/x.value)):1;
   S.V[sid]={v,rv:v*ratio,src,tier:x?.maybeTier,trend:x?.trend30Day||0,n:p?.name,p:pos,t:p?.maybeTeam,a:p?.maybeAge}}
  // picks
  S.FCP=FCP;S.RAP={};for(const p of rap?.picks||[]){S.RAP[`${p.pick_season}-${p.pick_round}-${p.pick_slot||''}`]=p[fk==='sf'?'val_sf':'val_1qb']}
  S.DPP={};if(dp)for(const[key,v]of Object.entries(dp.picks)){const x=lastOf(v[fk]);if(x!=null)S.DPP[key]=x}
- S.dpHist=dp;S.fcHist=fch;S.fk=fk;S.W=W}
+ S.DDP=DDP;S.dpHist=dp;S.fcHist=fch;S.fk=fk;S.W=W}
 
-function srcPick(season,round,tier){
- const s=+season,t=tier?tier.toLowerCase():null,out={};
- const fc=S.FCP[`${s} ${ord(round)}${tier?` (${tier[0].toUpperCase()+tier.slice(1)})`:''}`]??S.FCP[`${s} ${ord(round)}`];if(fc!=null)out.fc=fc*S.kFC;
- const raT=['early','mid','late'].map(x=>S.RAP[`${s}-${round}-${x}`]).filter(x=>x!=null);
- const ra=t&&S.RAP[`${s}-${round}-${t}`]!=null?S.RAP[`${s}-${round}-${t}`]:S.RAP[`${s}-${round}-`]??(raT.length?raT.reduce((a,b)=>a+b,0)/raT.length:null);if(ra!=null)out.ra=ra*S.kRA;
- const dpT=['early','mid','late'].map(x=>S.DPP[`${s}-${round}-${x}`]).filter(x=>x!=null);
- const dp=t&&S.DPP[`${s}-${round}-${t}`]!=null?S.DPP[`${s}-${round}-${t}`]:S.DPP[`${s}-${round}`]??(dpT.length?dpT.reduce((a,b)=>a+b,0)/dpT.length:null);if(dp!=null)out.dp=dp*S.kDP;
+// one source's raw pick value for a tier (early|mid|late) or the whole round (tier null), already on the common scale
+function rawPick(src,s,r,tier){let v=null;
+ if(src==='fc'){v=tier?S.FCP[`${s} ${ord(r)} (${tier[0].toUpperCase()+tier.slice(1)})`]:S.FCP[`${s} ${ord(r)}`]}
+ else if(src==='ra'){v=tier?S.RAP[`${s}-${r}-${tier}`]:S.RAP[`${s}-${r}-`]}
+ else if(src==='dp'){v=tier?S.DPP[`${s}-${r}-${tier}`]:S.DPP[`${s}-${r}`]}
+ else if(src==='dd'){v=tier?S.DDP[`${s}-${r}-${tier}`]:null}
+ return v==null?null:S.Q[src](v)}
+// exact slot: piecewise linear through the early/mid/late centers (2.5, 6.5, 10.5 in a 12 team league)
+function slotPick(src,s,r,slot,n){const T=['early','mid','late'].map(t=>rawPick(src,s,r,t));
+ if(T.some(x=>x==null)){const have=T.filter(x=>x!=null);const g=rawPick(src,s,r,null);return g??(have.length?have.reduce((a,b)=>a+b,0)/have.length:null)}
+ const third=n/3,c=[(1+third)/2,third+(1+third)/2,2*third+(1+third)/2];
+ let v;if(slot<=c[1]){v=T[0]+(T[1]-T[0])*(slot-c[0])/(c[1]-c[0])}else{v=T[1]+(T[2]-T[1])*(slot-c[1])/(c[2]-c[1])}
+ return Math.max(v,T[2]*.55)}
+function srcPick(season,round,tier,slot){const s=+season,n=S.teams.length||12,out={};
+ for(const src of SRCS){let v;if(slot)v=slotPick(src,s,round,slot,n);else if(tier)v=rawPick(src,s,round,tier)??rawPick(src,s,round,null);
+  else{v=rawPick(src,s,round,null);if(v==null){const T=['early','mid','late'].map(t=>rawPick(src,s,round,t)).filter(x=>x!=null);if(T.length)v=T.reduce((a,b)=>a+b,0)/T.length}}
+  if(v!=null)out[src]=v}
  return out}
-function pickValue(season,round,tier,depth=0){
- const src=srcPick(season,round,tier);let num=0,den=0;for(const s of['ra','fc','dp'])if(src[s]!=null&&S.W[s]>0){num+=S.W[s]*src[s];den+=S.W[s]}
- if(den)return num/den;if(depth>3)return 0;
- const seasons=[...new Set([...Object.keys(S.FCP).map(k=>+k.slice(0,4)),...Object.keys(S.RAP).map(k=>+k.slice(0,4))])].filter(Boolean).sort((a,b)=>a-b);
- if(!seasons.length)return 0;
- if(+season>seasons.at(-1))return pickValue(seasons.at(-1),round,null,depth+1)*0.93**(+season-seasons.at(-1));
- if(round>4)return pickValue(season,4,tier,depth+1)*0.72**(round-4);
- if(+season<seasons[0])return pickValue(seasons[0],round,tier,depth+1);
- return 0}
-function pickSrc(season,round,tier){const s=srcPick(season,round,tier);return s}
+function pickSeasonsKnown(){return[...new Set([...Object.keys(S.FCP),...Object.keys(S.RAP),...Object.keys(S.DDP||{})].map(k=>+k.slice(0,4)))].filter(Boolean).sort((a,b)=>a-b)}
+function pickSrcFull(season,round,tier,slot,depth=0){const src=srcPick(season,round,tier,slot);if(Object.keys(src).length||depth>3)return src;
+ const seasons=pickSeasonsKnown();if(!seasons.length)return src;const scale=(o,f)=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,v*f]));
+ if(+season>seasons.at(-1))return scale(pickSrcFull(seasons.at(-1),round,null,null,depth+1),0.93**(+season-seasons.at(-1)));
+ if(round>4)return scale(pickSrcFull(season,4,tier,slot,depth+1),0.72**(round-4));
+ if(+season<seasons[0])return pickSrcFull(seasons[0],round,tier,slot,depth+1);return src}
+function pickValue(season,round,tier,slot){const src=pickSrcFull(season,round,tier,slot);let num=0,den=0;for(const s of SRCS)if(src[s]!=null&&(S.W[s]||0)>0){num+=S.W[s]*src[s];den+=S.W[s]}return den?num/den:0}
+function pickSrc(season,round,tier,slot){return pickSrcFull(season,round,tier,slot)}
+// value of an asset in one source's eyes (null if that source has no number)
+function srcVal(a,src){const v=a.src?.[src];if(v==null)return null;return a.kind==='player'&&a.pos==='TE'?v*(S.tepM||1):v}
 
 function playerAsset(sid,owner){
  const v=S.V[sid],p=S.P?.[sid]||{};
@@ -413,9 +439,9 @@ function buildModel(){
   for(const orig of S.teams)for(let r=1;r<=rounds;r++){
    const owner=own[`${season}:${r}:${orig.rid}`]??orig.rid,exact=slotOf[orig.rid],slot=exact||(season===start?orig.projSlot:null);
    const tier=slot?(slot<=n/3?'early':slot<=2*n/3?'mid':'late'):null;
-   const name=exact?`${season} ${r}.${String(exact).padStart(2,'0')}`:`${season} ${ord(r)}${tier?' ('+tier+')':''}`;
+   const name=slot?`${season} ${r}.${String(slot).padStart(2,'0')}${exact?'':' (proj.)'}`:`${season} ${ord(r)}`;
    const a={id:`P:${season}:${r}:${orig.rid}`,kind:'pick',pos:'PICK',season,round:r,orig:orig.rid,owner,tier,name,slot,exact:!!exact,
-    sub:owner!==orig.rid?`via ${orig.mgr}`:(slot&&!exact?`own, proj. ${r}.${String(slot).padStart(2,'0')}`:'own pick'),v:pickValue(season,r,tier),rv:0,src:pickSrc(season,r,tier)};
+    sub:(owner!==orig.rid?`via ${orig.mgr}`:'own pick')+(tier?` · ${tier}`:''),v:pickValue(season,r,tier,slot),rv:0,src:pickSrc(season,r,tier,slot)};
    S.assets[a.id]=a;S.byRid[owner]?.assets.push(a)}}
  for(const t of S.teams){t.dyn=rosterDyn(t.assets);t.ps=posStrength(t.assets);t.pickV=t.assets.filter(a=>a.kind==='pick').reduce((s,a)=>s+a.v,0);
   const st=lineup(t.assets,'rv').st;t.age=st.length?st.reduce((s,a)=>s+(a.age||26),0)/st.length:0}
@@ -540,19 +566,19 @@ function accept(o,theirMkt,theirU,need,habit){
  const z=-.35+7*theirMkt+4*theirU+1.6*need+1.2*habit+act;return 1/(1+Math.exp(-z))}
 function grade(p){return p>=.15?'A+':p>=.09?'A':p>=.05?'A-':p>=.02?'B+':p>-.02?'B':p>-.05?'C':p>-.09?'D':'F'}
 const gradeColor=g=>g.startsWith('A')?'var(--gain)':g.startsWith('B')?'var(--ink)':'var(--loss)';
-const srcLine=a=>{const s=a.src||{};const parts=[['RA',s.ra],['FC',s.fc],['DP',s.dp]].filter(x=>x[1]!=null).map(x=>`${x[0]} ${fmt(x[1])}`);return parts.join(' · ')};
+const srcLine=a=>{const parts=SRCS.map(k=>[SRCA[k],srcVal(a,k)]).filter(x=>x[1]!=null).map(x=>`${x[0]} ${fmt(x[1])}`);return parts.join(' · ')};
 
 /* ---------- header ---------- */
 function setStatus(t){const b=$('#goBtn');b.innerHTML=t?`<span class="loading"></span> ${esc(t)}`:'Load leagues';b.disabled=!!t}
 function renderChips(){const f=S.f;
  const c=[f.dynasty?'Dynasty':'Redraft',f.qbs===2?'Superflex':'1QB',`${f.teams} teams`,f.ppr===1?'PPR':f.ppr===.5?'Half PPR':'Standard',f.tep?`TE premium +${f.tep}`:null,
-  f.dynasty?({ra:'Values: RosterAudit',fc:'Values: FantasyCalc',dp:'Values: DynastyProcess',blend:`Values: blend RA ${S.w.ra} · FC ${S.w.fc} · DP ${S.w.dp}`}[S.srcMode]):'FantasyCalc redraft',...['ra','fc','dp'].filter(s=>S.src[s]===false).map(s=>`${s.toUpperCase()} unavailable`)].filter(Boolean);
+  f.dynasty?({ra:'Values: RosterAudit',fc:'Values: FantasyCalc',dp:'Values: DynastyProcess',dd:'Values: Dynasty Dealer',blend:`Values: blend RA ${S.w.ra} · FC ${S.w.fc} · DP ${S.w.dp} · DD ${S.w.dd}`}[S.srcMode]):'FantasyCalc redraft',...SRCS.filter(s=>S.src[s]===false).map(s=>`${s.toUpperCase()} unavailable`)].filter(Boolean);
  $('#fmtChips').innerHTML=c.map(x=>`<span class="chip">${esc(x)}</span>`).join('');
  $('#sQbs').value=f.qbs;$('#sTeams').value=f.teams;$('#sPpr').value=f.ppr;$('#sTep').value=f.tep>=1?1:f.tep>0?.5:0;$('#sDyn').value=String(f.dynasty);$('#sConsol').checked=S.consol;
- for(const[k,id]of[['ra','wRa'],['fc','wFc'],['dp','wDp']]){$('#'+id).value=S.w[k];$('#'+id+'V').textContent=S.w[k]}
+ for(const[k,id]of[['ra','wRa'],['fc','wFc'],['dp','wDp'],['dd','wDd']]){$('#'+id).value=S.w[k];$('#'+id+'V').textContent=S.w[k]}
  $('#sSmash').value=Math.round(S.smash*100);$('#sSmashV').textContent=Math.round(S.smash*100)+'%';$('#sFloor').value=Math.round(S.floor*100);$('#sFloorV').textContent=Math.round(S.floor*100)+'%'}
 $('#sTeams').innerHTML=Array.from({length:9},(_,i)=>`<option>${i+8}</option>`).join('');
-for(const id of['wRa','wFc','wDp','sSmash','sFloor'])$('#'+id).addEventListener('input',e=>{$('#'+id+'V').textContent=e.target.value+(id.startsWith('s')?'%':'')});
+for(const id of['wRa','wFc','wDp','wDd','sSmash','sFloor'])$('#'+id).addEventListener('input',e=>{$('#'+id+'V').textContent=e.target.value+(id.startsWith('s')?'%':'')});
 
 $('#connect').addEventListener('submit',async e=>{e.preventDefault();const un=$('#uname').value.trim();if(!un)return;
  try{setStatus('Finding you…');const u=await api('user/'+encodeURIComponent(un));if(!u)throw new Error('No Sleeper user named '+un);S.user=u;store.set('user',un);
@@ -662,7 +688,7 @@ picker($('#pickB'),$('#ddB'),()=>optionsFor('b').filter(a=>!taken().has(a.id)),a
 
 function assetRow(a,side){return `<li class="asset">${headshot(a)}<div class="nm">${esc(a.name)} ${a.kind==='player'?posTag(a.pos):''}<small>${a.kind==='pick'?esc(a.sub||'Draft pick'):`${esc(a.team)} · age ${a.age??'?'}`}</small><small>${esc(srcLine(a))}</small></div><b class="num">${fmt(a.v)}</b><button class="x" data-rm="${side}:${esc(a.id)}" aria-label="Remove">×</button></li>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b)return;const[side,id]=b.dataset.rm.split(/:(.+)/);const arr=side==='a'?S.calc.give:S.calc.get;arr.splice(arr.indexOf(id),1);renderCalc()});
-function renderSrcSeg(){$('#srcSeg').innerHTML=[['ra','RosterAudit'],['fc','FantasyCalc'],['dp','DynastyProcess'],['blend','Blend']].map(([k,l])=>`<button data-src="${k}" class="${S.srcMode===k?'on':''}">${l}</button>`).join('')}
+function renderSrcSeg(){$('#srcSeg').innerHTML=[['ra','RosterAudit'],['fc','FantasyCalc'],['dp','DynastyProcess'],['dd','Dynasty Dealer'],['blend','Blend']].map(([k,l])=>`<button data-src="${k}" class="${S.srcMode===k?'on':''}">${l}</button>`).join('')}
 $('#srcSeg').addEventListener('click',async e=>{const b=e.target.closest('[data-src]');if(!b||b.dataset.src===S.srcMode)return;S.srcMode=b.dataset.src;store.set('srcMode',S.srcMode);renderSrcSeg();await reprice();toast('Values: '+b.textContent)});
 async function reprice(){try{await loadSources();if(S.lg){buildModel();if(S.hist){valueHistory();applyHabits()}S.odds=simOdds()}else S.assets={};renderAll()}catch(e){toast(e.message)}}
 function renderCalc(){
@@ -671,7 +697,7 @@ function renderCalc(){
  $('#listA').innerHTML=give.map(a=>assetRow(a,'a')).join('');$('#listB').innerHTML=get.map(a=>assetRow(a,'b')).join('');
  const rg=give.reduce((s,a)=>s+a.v,0),rt=get.reduce((s,a)=>s+a.v,0);$('#totA').textContent=fmt(rg);$('#totB').textContent=fmt(rt);
  const E=edgeOf(give,get),mg=E.g,mt=E.t,p=E.p;
- if(!give.length&&!get.length){$('#verdict').innerHTML=`<div class="disp" style="font-size:26px">Build a trade</div><p class="small mute">Add assets to both sides. With a league loaded, each side is locked to what that manager actually owns.</p><div class="scale"><i style="width:50%"></i><i style="width:50%"></i></div>`;$('#intel').hidden=true;return}
+ if(!give.length&&!get.length){$('#verdict').innerHTML=`<div class="disp" style="font-size:26px">Build a trade</div><p class="small mute">Add assets to both sides. With a league loaded, each side is locked to what that manager actually owns.</p><div class="scale"><i style="width:50%"></i><i style="width:50%"></i></div>`;$('#intel').hidden=true;$('#views').hidden=true;return}
  const g=grade(p),diff=mt-mg;
  $('#verdict').innerHTML=`<div class="small mute">Your grade</div><div class="grade" style="color:${gradeColor(g)}">${g}</div><div class="disp" style="font-size:24px">${Math.abs(p)<.02?'Dead even':p>0?`You win by ${fmt(diff)}`:`You overpay by ${fmt(-diff)}`}</div>
   ${p>=S.smash?'<div style="margin-top:6px"><span class="tag smash">Smash</span></div>':''}
@@ -681,7 +707,8 @@ function renderCalc(){
   ${S.calc.tx?txActions():`<div class="row" style="justify-content:center;margin-top:14px">${S.lg&&S.calc.a!=='any'&&S.calc.b!=='any'&&give.length&&get.length?`<button class="btn mint" id="proposeCalc">Send in Sleeper</button>`:''}</div>`}`;
  if(S.calc.tx)bindTxActions(give,get);
  $('#proposeCalc')?.addEventListener('click',()=>propose(S.byRid[S.calc.b],give,get));
- renderIntel(give,get)}
+ renderIntel(give,get);
+ const vb=$('#views');if(give.length&&get.length){const V=viewpoints(give,get,S.byRid[S.calc.a],S.byRid[S.calc.b]);vb.hidden=false;vb.innerHTML=viewsHtml(V)}else vb.hidden=true}
 function balanceHtml(give,get,mg,mt){if(Math.abs(mt-mg)<Math.max(mg,mt)*.03)return'';
  const short=mt>mg?'a':'b',pool=optionsFor(short).filter(a=>!taken().has(a.id)&&a.v>0),cur=short==='a'?give:get,target=short==='a'?mt:mg;
  const opts=pool.map(a=>({a,d:Math.abs(mkt(cur.concat(a))-target)})).sort((x,y)=>x.d-y.d).slice(0,4);if(!opts.length)return'';
@@ -718,6 +745,22 @@ function bindTxActions(give,get){const t=S.calc.tx,msg=h=>{const m=$('#txMsg');i
  twoTap($('#txCounter'),t.incoming?'Send counter':'Send revised offer',async()=>{const o=S.byRid[S.calc.b];const nt=await sendTrade(o,give,get);
   try{await rejectTrade(t.id,t.leg)}catch(er){msg(`<span style="color:var(--warn)">Your new offer went out, but the original could not be ${t.incoming?'declined':'withdrawn'} (${esc(er.message)}). Handle it in My trades.</span>`);delete S.calc.tx;loadMine();return}
   S.calc.tx={id:String(nt.transaction_id),leg:nt.leg,incoming:false,mgr:o.mgr,orig:[...S.calc.give].sort().join('|')+'>'+[...S.calc.get].sort().join('|'),created:Date.now()};toast(t.incoming?'Counter sent':'Revised offer sent');loadMine();renderCalc()})}
+function windowScore(assets){const Y=+S.lg.season;let tot=0;for(let k=0;k<3;k++){const pl=assets.filter(a=>a.kind==='player').map(a=>{let v=a.v;for(let i=0;i<k;i++)v*=ageStep(a.pos,(a.age||26)+i);return{...a,v}});let sc=lineup(pl,'v').sum;for(const a of assets)if(a.kind==='pick'&&a.season<=Y+k)sc+=a.v*(a.season===Y+k?.35:.55);tot+=sc}return tot}
+function viewpoints(give,get,A,B,withOdds=true){const rows=[];
+ for(const k of SRCS){if(!S.src[k])continue;const gv=give.map(a=>srcVal(a,k)),tv=get.map(a=>srcVal(a,k));const missing=[...gv,...tv].filter(x=>x==null).length;
+  const g=mkt(gv.map(v=>({v:v||0}))),t=mkt(tv.map(v=>({v:v||0})));rows.push({key:k,label:SRCN[k],g,t,edge:(t-g)/Math.max(g,t,1),missing})}
+ let sim=null;if(S.lg&&A&&B&&A!==B){const ea=evalTeam(A,give,get),eb=evalTeam(B,get,give);const base=Math.max(mkt(give),mkt(get),1500);
+  let od=null;if(withOdds&&S.odds){const after=simOdds({[A.rid]:ea.dWin,[B.rid]:eb.dWin});od={po:after[A.rid].po-S.odds[A.rid].po,ti:after[A.rid].ti-S.odds[A.rid].ti}}
+  const w0=windowScore(A.assets),w1=windowScore(ea.after);sim={edge:ea.u/base,od,win3:(w1-w0)/Math.max(w0,1),window:A.window}}
+ const all=[...rows.map(r=>r.edge),...(sim?[sim.edge]:[])];return{rows,sim,fav:all.filter(e=>e>.02).length,against:all.filter(e=>e<-.02).length,n:all.length}}
+function vbar(e){const w=Math.min(50,Math.abs(e)*100);return `<div class="vbar"><i style="${e>=0?`left:50%;width:${w}%;background:var(--gain)`:`right:50%;width:${w}%;background:var(--loss)`}"></i></div>`}
+const vlabel=e=>Math.abs(e)<.02?'<span class="mute">Even</span>':e>0?`<b class="gain">+${Math.round(e*100)}% you</b>`:`<b class="loss">${Math.round(-e*100)}% them</b>`;
+function viewsHtml(V){
+ const summary=`${V.fav} of ${V.n} viewpoints favor you${V.against?`, ${V.against} favor them`:''}`;
+ return `<div class="sec-h" style="margin-bottom:4px"><div><h3 style="font-size:24px">Multiple viewpoints</h3><p class="small mute">How each value source grades this trade for you, with the consolidation premium applied the same way to each. Bars right of center favor you.</p></div><span class="tag ${V.fav>V.n/2?'smash':''}">${summary}</span></div>
+ ${V.rows.map(r=>`<div class="vrow"><div><b>${r.label}</b><div class="small mute">${fmt(r.g)} vs ${fmt(r.t)}${r.missing?` · ${r.missing} unpriced`:''}</div></div>${vbar(r.edge)}<div class="num">${vlabel(r.edge)}</div></div>`).join('')}
+ ${V.sim?`<div class="vrow"><div><b>Trade Lab sim</b><div class="small mute">Your league, ${winLabel(V.sim.window).toLowerCase()} lens</div></div>${vbar(V.sim.edge)}<div class="num">${vlabel(V.sim.edge)}</div></div>
+  <p class="small mute" style="margin:6px 0 0">Trade Lab sim scores the trade for your roster: lineup now, long term value and age, weighted by your window. 3-season projected strength <b class="${V.sim.win3>=0?'gain':'loss'}">${pct(V.sim.win3)}</b>${V.sim.od?` · playoff odds <b class="${V.sim.od.po>=0?'gain':'loss'}">${V.sim.od.po>=0?'+':''}${(V.sim.od.po*100).toFixed(1)} pts</b> · title odds <b class="${V.sim.od.ti>=0?'gain':'loss'}">${V.sim.od.ti>=0?'+':''}${(V.sim.od.ti*100).toFixed(1)} pts</b>`:''}.</p>`:''}`}
 function renderIntel(give,get){
  const A=S.byRid[S.calc.a],B=S.byRid[S.calc.b];if(!A||!B||A===B){$('#intel').hidden=true;return}
  const ea=evalTeam(A,give,get),eb=evalTeam(B,get,give),na=needTerm(A,ea.after),nb=needTerm(B,eb.after);
@@ -726,8 +769,7 @@ function renderIntel(give,get){
  const card=(t,e,nd,isMe)=>{const ch=POS.filter(p=>nd.moves[p][0]!==nd.moves[p][1]);const v=e.u>base*.03?'Helps':e.u<-base*.03?'Hurts':'Neutral';
   return `<div><div class="row" style="justify-content:space-between"><div class="tm">${avatar(t)}${who(t)}</div><span class="badge w-${t.window}">${winLabel(t.window)}</span></div>
   <div class="stats" style="margin-top:10px"><div><b class="${e.dWin>=0?'gain':'loss'}">${sgn(e.dWin)}</b><small>Lineup now</small></div><div><b class="${e.dDyn>=0?'gain':'loss'}">${sgn(e.dDyn)}</b><small>Roster value</small></div><div><b>${v}</b><small>For their window</small></div><div><b>${isMe?pct(mp):Math.round(odds*100)+'%'}</b><small>${isMe?'Market edge':'Accept odds'}</small></div></div>
-  <div class="pr-row">${ch.length?ch.map(p=>`<span class="pr">${p} #${nd.moves[p][0]} → <b class="${nd.moves[p][1]<nd.moves[p][0]?'gain':'loss'}">#${nd.moves[p][1]}</b></span>`).join(''):'<span class="small mute">No positional rank changes</span>'}
-  ${!isMe&&t.habits&&Math.abs(hb)>.05?`<span class="pr">${hb>0?'Fits':'Goes against'} their trade habits</span>`:''}</div></div>`};
+  <div class="pr-row">${!isMe&&t.habits&&Math.abs(hb)>.05?`<span class="pr">${hb>0?'Fits':'Goes against'} their trade habits</span>`:''}</div></div>`};
  let oddsRow='';if(S.odds){const after=simOdds({[A.rid]:ea.dWin,[B.rid]:eb.dWin});const f=(t)=>{const b=S.odds[t.rid],a=after[t.rid];const d=(x,y)=>`${Math.round(x*100)}% → <b class="${y>x+.005?'gain':y<x-.005?'loss':''}">${Math.round(y*100)}%</b>`;return `<div class="pr-row"><span class="pr">${esc(t.mgr)} playoffs ${d(b.po,a.po)}</span><span class="pr">title ${d(b.ti,a.ti)}</span></div>`};oddsRow=`<h3 style="font-size:20px;margin:16px 0 4px">Season odds if this trade happens</h3>${f(A)}${f(B)}`}
  const R=rankShift(A,B,give,get);
  $('#intel').hidden=false;$('#intel').innerHTML=`<h3>Trade intelligence</h3><div class="grid2">${card(A,ea,na,true)}${card(B,eb,nb,false)}</div><h3 style="font-size:20px;margin:18px 0 6px">League ranks before and after</h3>${rankTableHtml(A,B,R)}${oddsRow}`}
@@ -907,6 +949,7 @@ function renderMine(){const box=$('#mineBody');if(!box)return;
   return `<article class="deal ${live&&!s.mine?'smash':''}" data-tx="${esc(tx.transaction_id)}"><div class="deal-h"><span class="tag ${live&&!s.mine?'smash':''}">${live?(s.mine?'Outgoing':'Incoming'):esc(tx.status==='complete'?'Accepted':tx.status==='rejected'?'Declined or withdrawn':tx.status)}</span><div class="tm" style="gap:8px">${avatar(s.other)}${who(s.other)}</div></div>
   <div class="swap"><div><h4>You send</h4>${s.give.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabOut?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabOut}</span></div>`:''}</div><div><h4>You get</h4>${s.get.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabIn?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabIn}</span></div>`:''}</div></div>
   ${R?rankChips(S.byRid[S.myRid],s.other,R):''}
+  ${live&&s.other?(()=>{const V=viewpoints(s.give,s.get,S.byRid[S.myRid],s.other,false);return `<div class="small"><b class="${V.fav>V.n/2?'gain':V.against>V.n/2?'loss':''}">${V.fav} of ${V.n} viewpoints favor you</b> <span class="mute">· open in calculator for the full breakdown</span></div>`})():''}
   <div class="row" style="justify-content:space-between"><span class="small mute">${new Date(tx.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · grade for you <b style="color:${gradeColor(g)}">${g}</b><br>${edgeLine(E)}</span>
   ${live?`<span class="row" style="gap:6px"><button class="btn sm" data-calcfrom="${esc(tx.transaction_id)}">Open in calculator</button>${s.mine?`<button class="btn sm" data-withdraw="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Withdraw</button>`:`<button class="btn sm" data-decline="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Decline</button><button class="btn sm mint" data-accept="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Accept</button>`}</span>`:''}</div>${live&&!s.mine&&rosterRoom(s).over>0?`<p class="small" style="color:var(--warn);margin:0">Accepting puts you ${rosterRoom(s).over} over your roster limit. Sleeper will make you drop ${rosterRoom(s).over>1?'players':'a player'}, so accept this one in Sleeper.</p>`:''}</article>`};
  box.innerHTML=`<div class="sec-h"><div><h2>My trades</h2><p class="mute small">Live from Sleeper for ${esc(S.lg.name)}. Accept and Decline ask for a second tap.</p></div><div class="row"><button class="btn sm" id="mineRefresh">Refresh</button><button class="btn sm" id="mineSettings">Sleeper connection</button></div></div>
@@ -1107,8 +1150,8 @@ function renderRookies(){
 /* ---------- SETTINGS ---------- */
 $('#sApply').addEventListener('click',async()=>{
  S.f={qbs:+$('#sQbs').value,teams:+$('#sTeams').value,ppr:+$('#sPpr').value,tep:+$('#sTep').value,dynasty:$('#sDyn').value==='true'};
- S.consol=$('#sConsol').checked;S.w={ra:+$('#wRa').value,fc:+$('#wFc').value,dp:+$('#wDp').value};S.smash=+$('#sSmash').value/100;S.floor=+$('#sFloor').value/100;
- if(!S.w.ra&&!S.w.fc&&!S.w.dp)S.w={ra:50,fc:35,dp:15};
+ S.consol=$('#sConsol').checked;S.w={ra:+$('#wRa').value,fc:+$('#wFc').value,dp:+$('#wDp').value,dd:+$('#wDd').value};S.smash=+$('#sSmash').value/100;S.floor=+$('#sFloor').value/100;
+ if(!S.w.ra&&!S.w.fc&&!S.w.dp&&!S.w.dd)S.w={ra:40,fc:25,dp:10,dd:25};
  store.set('consol',S.consol);store.set('weights',S.w);store.set('smash',S.smash*100);store.set('floor',S.floor*100);if(S.lg)store.set('fmt:'+S.lg.league_id,S.f);
  try{await loadSources();if(S.lg){buildModel();if(S.hist){valueHistory();applyHabits()}S.odds=simOdds()}else S.assets={};renderAll();toast('Re-priced')}catch(e){toast(e.message)}});
 
