@@ -147,7 +147,7 @@ footer a{color:#c4cde0}
 <header class="top">
  <div class="wrap">
   <div class="hrow">
-   <div class="brand"><a class="home" href="../">Caden Smith · Portfolio</a><h1>Trade<span>Lab</span></h1><p>Dynasty values blended from three markets, roster rankings, and a finder that hunts smash trades in your Sleeper league.</p></div>
+   <div class="brand"><a class="home" href="../">Caden Smith · Portfolio</a><h1>Trade<span>Lab</span></h1><p>Dynasty values from RosterAudit, roster rankings, season odds, and a finder that hunts smash trades in your Sleeper league.</p></div>
    <form class="connect" id="connect">
     <input id="uname" placeholder="Sleeper username" autocomplete="username" aria-label="Sleeper username">
     <button class="btn mint" id="goBtn">Load leagues</button>
@@ -172,7 +172,7 @@ footer a{color:#c4cde0}
  <section class="view" id="v-league"><div id="leagueBody"><div class="card empty"><h3>Connect your league</h3><p>Enter your Sleeper username above. Everything loads from Sleeper's public API, nothing to sign into.</p></div></div></section>
 
  <section class="view" id="v-calc">
-  <div class="sec-h"><h2>Trade calculator</h2><div class="row"><button class="btn sm" id="swapSides">Swap sides</button><button class="btn sm" id="clearCalc">Clear</button></div></div>
+  <div class="sec-h"><h2>Trade calculator</h2><div class="seg" id="srcSeg"></div><div class="row"><button class="btn sm" id="swapSides">Swap sides</button><button class="btn sm" id="clearCalc">Clear</button></div></div>
   <div class="calc">
    <div class="card side"><h3>You give</h3><select class="field" id="teamA" aria-label="Your team"></select><div class="picker"><input id="pickA" placeholder="Add player or pick" autocomplete="off"><div class="dd" id="ddA"></div></div><ul class="assets" id="listA"></ul><div class="tot"><span>Total</span><span class="num" id="totA">0</span></div></div>
    <div class="card verdict" id="verdict"></div>
@@ -214,7 +214,7 @@ footer a{color:#c4cde0}
   <div class="grid2">
    <div class="card">
     <h3 style="font-size:24px;margin-bottom:6px">Value blend</h3>
-    <p class="small mute" style="margin-top:0">Each source is rescaled to the same 0 to 10,000 scale before blending. Weights renormalize when a source has no value for a player.</p>
+    <p class="small mute" style="margin-top:0">Used only when Blend is picked on the calculator; RosterAudit is the default. Each source is rescaled to the same 0 to 10,000 scale before blending. Weights renormalize when a source has no value for a player.</p>
     <div class="controls" style="grid-template-columns:minmax(0,1fr)">
      <label>RosterAudit (Sleeper trades) <span id="wRaV"></span><input type="range" id="wRa" min="0" max="100" step="5"></label>
      <label>FantasyCalc (trades across sites) <span id="wFcV"></span><input type="range" id="wFc" min="0" max="100" step="5"></label>
@@ -243,6 +243,7 @@ footer a{color:#c4cde0}
      <li><b>Roster strength</b> is 65% this season's best lineup and 35% long term player value. Picks are ranked separately.</li>
      <li><b>Adjusted totals</b> use a 1.25 power sum, so two 5,000 players equal about 8,500.</li>
      <li><b>Acceptance odds</b> are a hand tuned model: market value they get, lineup and window fit, positional needs, their trade history habits, and how often they trade. A ranking signal, not a calibrated probability yet.</li>
+     <li><b>Scale</b>: every source is rescaled to RosterAudit's scale, so RosterAudit numbers match its site.</li>
      <li><b>Value at the time</b> uses saved daily FantasyCalc snapshots when available, otherwise DynastyProcess weekly history (2021 on).</li>
     </ul>
    </div>
@@ -285,7 +286,7 @@ const tlabel=t=>t.name&&t.name!==t.mgr?`${t.mgr} · ${t.name}`:t.mgr;
 /* ---------- state ---------- */
 const S={user:null,lg:null,teams:[],byRid:{},assets:{},P:null,V:{},myRid:null,
  f:{qbs:2,teams:12,ppr:1,tep:0,dynasty:true},consol:store.get('consol',true),
- w:store.get('weights',{ra:50,fc:35,dp:15}),smash:store.get('smash',15)/100,floor:store.get('floor',20)/100,
+ w:store.get('weights',{ra:50,fc:35,dp:15}),srcMode:store.get('srcMode','ra'),smash:store.get('smash',15)/100,floor:store.get('floor',20)/100,
  slots:[],calc:{a:'any',b:'any',give:[],get:[]},hist:null,pickSeasons:[],rankBy:'strength',src:{}};
 
 /* ---------- value sources ---------- */
@@ -308,12 +309,15 @@ async function loadSources(){
  const RA={};if(ra)for(const[sid,v]of Object.entries(ra))if(v&&typeof v==='object'){const val=v[fk==='sf'?'sf':'1qb'];if(val!=null)RA[sid]=+val}
  const lastOf=s=>{if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null};
  const DP={};if(dp)for(const[sid,v]of Object.entries(dp.players))(()=>{const x=lastOf(v[fk]);if(x!=null)DP[sid]=x})();
- // align scales to FantasyCalc
- const k=(src)=>{const r=[];for(const sid in src){const a=FC[sid]?.value;if(a>1500&&src[sid]>300)r.push(a/src[sid])}return r.length>20?median(r):1};
- S.kRA=fc?k(RA):1;S.kDP=fc?k(DP):1;
- const W=f.dynasty?S.w:{ra:0,fc:100,dp:0};const tep=f.tep>0?1+0.25*f.tep:1;
+ // align every source to RosterAudit's scale (FantasyCalc's if RosterAudit is down)
+ const FCv={};for(const sid in FC)FCv[sid]=FC[sid].value;const base=ra?RA:FCv;
+ const k=(src)=>{if(src===base)return 1;const r=[];for(const sid in src){const a=base[sid];if(a>1500&&src[sid]>300)r.push(a/src[sid])}return r.length>20?median(r):1};
+ S.kRA=1;S.kFC=k(FCv);S.kDP=k(DP);
+ let mode=S.srcMode;if(mode!=='blend'&&!S.src[mode]){mode='blend';setTimeout(()=>toast('That value source is unavailable right now, using the blend'),0)}
+ const MW={ra:{ra:1,fc:0,dp:0},fc:{ra:0,fc:1,dp:0},dp:{ra:0,fc:0,dp:1},blend:S.w};
+ const W=f.dynasty?MW[mode]:{ra:0,fc:100,dp:0};const tep=f.tep>0?1+0.25*f.tep:1;
  S.V={};const ids=new Set([...Object.keys(FC),...Object.keys(RA),...Object.keys(DP)]);
- for(const sid of ids){const src={fc:FC[sid]?.value,ra:RA[sid]!=null?RA[sid]*S.kRA:undefined,dp:DP[sid]!=null?DP[sid]*S.kDP:undefined};
+ for(const sid of ids){const src={fc:FC[sid]?FC[sid].value*S.kFC:undefined,ra:RA[sid]!=null?RA[sid]*S.kRA:undefined,dp:DP[sid]!=null?DP[sid]*S.kDP:undefined};
   let num=0,den=0;for(const s of['ra','fc','dp'])if(src[s]!=null&&W[s]>0){num+=W[s]*src[s];den+=W[s]}
   if(!den)continue;const x=FC[sid];const p=x?.player;const pos=p?.position||S.P?.[sid]?.p;const m=pos==='TE'?tep:1;const v=num/den*m;
   const ratio=x&&x.value>0?Math.min(3,Math.max(.3,(x.redraftValue??x.value)/x.value)):1;
@@ -325,7 +329,7 @@ async function loadSources(){
 
 function srcPick(season,round,tier){
  const s=+season,t=tier?tier.toLowerCase():null,out={};
- const fc=S.FCP[`${s} ${ord(round)}${tier?` (${tier[0].toUpperCase()+tier.slice(1)})`:''}`]??S.FCP[`${s} ${ord(round)}`];if(fc!=null)out.fc=fc;
+ const fc=S.FCP[`${s} ${ord(round)}${tier?` (${tier[0].toUpperCase()+tier.slice(1)})`:''}`]??S.FCP[`${s} ${ord(round)}`];if(fc!=null)out.fc=fc*S.kFC;
  const raT=['early','mid','late'].map(x=>S.RAP[`${s}-${round}-${x}`]).filter(x=>x!=null);
  const ra=t&&S.RAP[`${s}-${round}-${t}`]!=null?S.RAP[`${s}-${round}-${t}`]:S.RAP[`${s}-${round}-`]??(raT.length?raT.reduce((a,b)=>a+b,0)/raT.length:null);if(ra!=null)out.ra=ra*S.kRA;
  const dpT=['early','mid','late'].map(x=>S.DPP[`${s}-${round}-${x}`]).filter(x=>x!=null);
@@ -457,7 +461,7 @@ function thenValue(item,ts){
  const date=new Date(ts).toISOString().slice(0,10);const tep=S.f.tep>0?1+.25*S.f.tep:1;
  const fcOk=S.fcHist&&S.fcHist.dates.length&&date>=S.fcHist.dates[0];
  if(item.kind==='player'){const m=(S.P?.[item.sid]?.p==='TE')?tep:1;
-  if(fcOk){const v=histLookup(S.fcHist,'players',item.sid,date);if(v!=null)return{v:v*m,src:'FC'}}
+  if(fcOk){const v=histLookup(S.fcHist,'players',item.sid,date);if(v!=null)return{v:v*S.kFC*m,src:'FC'}}
   const v=histLookup(S.dpHist,'players',item.sid,date);if(v!=null)return{v:v*S.kDP*m,src:'DP'};
   return{v:0,src:'none'}}
  if(item.kind==='pick'){
@@ -535,7 +539,7 @@ const srcLine=a=>{const s=a.src||{};const parts=[['RA',s.ra],['FC',s.fc],['DP',s
 function setStatus(t){const b=$('#goBtn');b.innerHTML=t?`<span class="loading"></span> ${esc(t)}`:'Load leagues';b.disabled=!!t}
 function renderChips(){const f=S.f;
  const c=[f.dynasty?'Dynasty':'Redraft',f.qbs===2?'Superflex':'1QB',`${f.teams} teams`,f.ppr===1?'PPR':f.ppr===.5?'Half PPR':'Standard',f.tep?`TE premium +${f.tep}`:null,
-  f.dynasty?`Blend RA ${S.w.ra} · FC ${S.w.fc} · DP ${S.w.dp}`:'FantasyCalc redraft',...['ra','fc','dp'].filter(s=>S.src[s]===false).map(s=>`${s.toUpperCase()} unavailable`)].filter(Boolean);
+  f.dynasty?({ra:'Values: RosterAudit',fc:'Values: FantasyCalc',dp:'Values: DynastyProcess',blend:`Values: blend RA ${S.w.ra} · FC ${S.w.fc} · DP ${S.w.dp}`}[S.srcMode]):'FantasyCalc redraft',...['ra','fc','dp'].filter(s=>S.src[s]===false).map(s=>`${s.toUpperCase()} unavailable`)].filter(Boolean);
  $('#fmtChips').innerHTML=c.map(x=>`<span class="chip">${esc(x)}</span>`).join('');
  $('#sQbs').value=f.qbs;$('#sTeams').value=f.teams;$('#sPpr').value=f.ppr;$('#sTep').value=f.tep>=1?1:f.tep>0?.5:0;$('#sDyn').value=String(f.dynasty);$('#sConsol').checked=S.consol;
  for(const[k,id]of[['ra','wRa'],['fc','wFc'],['dp','wDp']]){$('#'+id).value=S.w[k];$('#'+id+'V').textContent=S.w[k]}
@@ -651,7 +655,11 @@ picker($('#pickB'),$('#ddB'),()=>optionsFor('b').filter(a=>!taken().has(a.id)),a
 
 function assetRow(a,side){return `<li class="asset">${headshot(a)}<div class="nm">${esc(a.name)} ${a.kind==='player'?posTag(a.pos):''}<small>${a.kind==='pick'?esc(a.sub||'Draft pick'):`${esc(a.team)} · age ${a.age??'?'}`}</small><small>${esc(srcLine(a))}</small></div><b class="num">${fmt(a.v)}</b><button class="x" data-rm="${side}:${esc(a.id)}" aria-label="Remove">×</button></li>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b)return;const[side,id]=b.dataset.rm.split(/:(.+)/);const arr=side==='a'?S.calc.give:S.calc.get;arr.splice(arr.indexOf(id),1);renderCalc()});
+function renderSrcSeg(){$('#srcSeg').innerHTML=[['ra','RosterAudit'],['fc','FantasyCalc'],['dp','DynastyProcess'],['blend','Blend']].map(([k,l])=>`<button data-src="${k}" class="${S.srcMode===k?'on':''}">${l}</button>`).join('')}
+$('#srcSeg').addEventListener('click',async e=>{const b=e.target.closest('[data-src]');if(!b||b.dataset.src===S.srcMode)return;S.srcMode=b.dataset.src;store.set('srcMode',S.srcMode);renderSrcSeg();await reprice();toast('Values: '+b.textContent)});
+async function reprice(){try{await loadSources();if(S.lg){buildModel();if(S.hist){valueHistory();applyHabits()}S.odds=simOdds()}else S.assets={};renderAll()}catch(e){toast(e.message)}}
 function renderCalc(){
+ renderSrcSeg();
  const give=S.calc.give.map(id=>S.assets[id]).filter(Boolean),get=S.calc.get.map(id=>S.assets[id]).filter(Boolean);
  $('#listA').innerHTML=give.map(a=>assetRow(a,'a')).join('');$('#listB').innerHTML=get.map(a=>assetRow(a,'b')).join('');
  const rg=give.reduce((s,a)=>s+a.v,0),rt=get.reduce((s,a)=>s+a.v,0);$('#totA').textContent=fmt(rg);$('#totB').textContent=fmt(rt);
