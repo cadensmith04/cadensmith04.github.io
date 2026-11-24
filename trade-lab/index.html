@@ -518,9 +518,10 @@ function habitFit(t,getForThem,giveFromThem){const h=t.habits;if(!h||!h.conf)ret
 
 /* ---------- valuation ---------- */
 const P_NORM=1.25;
-// consolidation premium scales with the best asset: full 1.25 power at 4,000+, close to a raw sum for bench pieces
-function mkt(set,ref){if(!set.length)return 0;if(!S.consol)return set.reduce((s,a)=>s+(a.v||0),0);const top=ref??Math.max(...set.map(a=>a.v||0));const p=1+(P_NORM-1)*Math.min(1,top/4000);return set.reduce((s,a)=>s+Math.max(a.v||0,0)**p,0)**(1/p)}
-function edgeOf(give,get){const top=Math.max(0,...give.map(a=>a.v||0),...get.map(a=>a.v||0));const g=mkt(give,top),t=mkt(get,top);return{g,t,p:(t-g)/Math.max(g,t,1)}}
+function mkt(set){if(!set.length)return 0;if(!S.consol)return set.reduce((s,a)=>s+(a.v||0),0);return set.reduce((s,a)=>s+Math.max(a.v||0,0)**P_NORM,0)**(1/P_NORM)}
+const rawSum=set=>set.reduce((s,a)=>s+(a.v||0),0);
+function edgeOf(give,get){const g=mkt(give),t=mkt(get),rg=rawSum(give),rt=rawSum(get);return{g,t,rg,rt,p:(t-g)/Math.max(g,t,1),rp:(rt-rg)/Math.max(rg,rt,1),adj:(t-g)-(rt-rg)}}
+function edgeLine(E){return S.consol?`Raw ${pct(E.rp)} · consolidation ${E.adj>=0?'+':''}${fmt(E.adj)} · net <b class="${E.p>=0?'gain':'loss'}">${pct(E.p)}</b>`:`Raw <b class="${E.rp>=0?'gain':'loss'}">${pct(E.rp)}</b>`}
 const WTS={contend:{win:.65,dyn:.35},middle:{win:.4,dyn:.6},rebuild:{win:.12,dyn:.88}};
 function ageAdj(a,win){if(win!=='rebuild'&&win!=='contend')return 0;
  if(a.kind==='pick')return win==='rebuild'?.08*a.v:-.06*a.v;
@@ -641,10 +642,10 @@ function renderCalcTeams(){
  const opts=S.teams.map(t=>`<option value="${t.rid}">${esc(tlabel(t))}${t.rid===S.myRid?' (you)':''}</option>`).join('')+'<option value="any">Any player (no league)</option>';
  $('#teamA').innerHTML=opts;$('#teamB').innerHTML=opts;$('#teamA').value=String(S.calc.a??'any');$('#teamB').value=String(S.calc.b??'any')}
 function resetCalc(){S.calc={a:S.myRid??'any',b:S.teams.find(t=>t.rid!==S.myRid)?.rid??'any',give:[],get:[]}}
-$('#teamA').addEventListener('change',e=>{S.calc.a=e.target.value==='any'?'any':+e.target.value;S.calc.give=[];renderCalc()});
-$('#teamB').addEventListener('change',e=>{S.calc.b=e.target.value==='any'?'any':+e.target.value;S.calc.get=[];renderCalc()});
+$('#teamA').addEventListener('change',e=>{delete S.calc.tx;S.calc.a=e.target.value==='any'?'any':+e.target.value;S.calc.give=[];renderCalc()});
+$('#teamB').addEventListener('change',e=>{delete S.calc.tx;S.calc.b=e.target.value==='any'?'any':+e.target.value;S.calc.get=[];renderCalc()});
 $('#swapSides').addEventListener('click',()=>{const c=S.calc;[c.a,c.b,c.give,c.get]=[c.b,c.a,c.get,c.give];renderCalcTeams();renderCalc()});
-$('#clearCalc').addEventListener('click',()=>{S.calc.give=[];S.calc.get=[];renderCalc()});
+$('#clearCalc').addEventListener('click',()=>{delete S.calc.tx;S.calc.give=[];S.calc.get=[];renderCalc()});
 
 function picker(inp,dd,getOpts,onAdd){let hl=0,list=[];
  const draw=()=>{const q=inp.value.trim().toLowerCase();
@@ -675,9 +676,10 @@ function renderCalc(){
  $('#verdict').innerHTML=`<div class="small mute">Your grade</div><div class="grade" style="color:${gradeColor(g)}">${g}</div><div class="disp" style="font-size:24px">${Math.abs(p)<.02?'Dead even':p>0?`You win by ${fmt(diff)}`:`You overpay by ${fmt(-diff)}`}</div>
   ${p>=S.smash?'<div style="margin-top:6px"><span class="tag smash">Smash</span></div>':''}
   <div class="scale"><i style="width:${mg/(mg+mt||1)*100}%"></i><i style="width:${mt/(mg+mt||1)*100}%"></i></div><div class="row small mute" style="justify-content:space-between"><span>Give ${fmt(mg)}</span><span>Get ${fmt(mt)}</span></div>
-  <div class="kv"><span>Raw give</span><b class="num">${fmt(rg)}</b><span>Raw get</span><b class="num">${fmt(rt)}</b><span>${S.consol?'Adjusted edge':'Edge'}</span><b class="num ${p>=0?'gain':'loss'}">${pct(p)}</b></div>
+  <div class="kv"><span>Raw give</span><b class="num">${fmt(rg)}</b><span>Raw get</span><b class="num">${fmt(rt)}</b><span>Raw edge</span><b class="num ${E.rp>=0?'gain':'loss'}">${pct(E.rp)}</b>${S.consol?`<span title="Several smaller pieces are worth less than their sum: studs are scarce and extra players cost roster spots">Consolidation premium</span><b class="num ${E.adj>=0?'gain':'loss'}">${E.adj>=0?'+':''}${fmt(E.adj)}</b><span><b>Net edge</b></span><b class="num ${p>=0?'gain':'loss'}">${pct(p)}</b>`:''}</div>${S.consol&&Math.abs(E.adj)>=Math.max(mg,mt)*.02?`<p class="small mute" style="text-align:left;margin:8px 0 0">${E.adj<0?'You are taking more pieces, so the side with the best player gets a premium.':'You are getting the best player, so you earn the consolidation premium.'}</p>`:''}
   ${balanceHtml(give,get,mg,mt)}
-  <div class="row" style="justify-content:center;margin-top:14px">${S.lg&&S.calc.a!=='any'&&S.calc.b!=='any'&&give.length&&get.length?`<button class="btn mint" id="proposeCalc">Send in Sleeper</button>`:''}</div>`;
+  ${S.calc.tx?txActions():`<div class="row" style="justify-content:center;margin-top:14px">${S.lg&&S.calc.a!=='any'&&S.calc.b!=='any'&&give.length&&get.length?`<button class="btn mint" id="proposeCalc">Send in Sleeper</button>`:''}</div>`}`;
+ if(S.calc.tx)bindTxActions(give,get);
  $('#proposeCalc')?.addEventListener('click',()=>propose(S.byRid[S.calc.b],give,get));
  renderIntel(give,get)}
 function balanceHtml(give,get,mg,mt){if(Math.abs(mt-mg)<Math.max(mg,mt)*.03)return'';
@@ -685,6 +687,37 @@ function balanceHtml(give,get,mg,mt){if(Math.abs(mt-mg)<Math.max(mg,mt)*.03)retu
  const opts=pool.map(a=>({a,d:Math.abs(mkt(cur.concat(a))-target)})).sort((x,y)=>x.d-y.d).slice(0,4);if(!opts.length)return'';
  return `<div class="balance" style="margin-top:14px;text-align:left"><div class="small mute" style="font-weight:600">${short==='a'?'To make it fair, you could add':'To even it up, ask them for'}</div>${opts.map(o=>`<button class="btn sm" data-bal="${short}:${esc(o.a.id)}">${esc(o.a.name)} · ${fmt(o.a.v)}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-bal]');if(!b)return;const[side,id]=b.dataset.bal.split(/:(.+)/);(side==='a'?S.calc.give:S.calc.get).push(id);renderCalc()});
+function rankShift(A,B,give,get){
+ const ea=evalTeam(A,give,get),eb=evalTeam(B,get,give);const psA=posStrength(ea.after),psB=posStrength(eb.after);
+ const winA=lineup(ea.after,'rv').sum,winB=lineup(eb.after,'rv').sum,dpA=rosterDyn(ea.after,false),dpB=rosterDyn(eb.after,false);
+ const val=(t,k)=>t===A?(k==='win'?winA:k==='dynP'?dpA:psA[k]):t===B?(k==='win'?winB:k==='dynP'?dpB:psB[k]):(k==='win'?t.win:k==='dynP'?t.dynP:t.ps[k]);
+ const cols=[...POS,'PICK','win','dynP'];const out={};
+ for(const t of[A,B]){out[t.rid]={};for(const k of cols){const before=k==='win'?t.winRank:k==='dynP'?t.dynPRank:t.pr[k];const after=rankOf(val(t,k),S.teams.map(x=>val(x,k)));out[t.rid][k]=[before,after]}}
+ return{cols,out,ea,eb}}
+const COLN={QB:'QB',RB:'RB',WR:'WR',TE:'TE',PICK:'Picks',win:'Win now',dynP:'Dynasty'};
+function rankTableHtml(A,B,R){const cell=([b,a])=>a===b?`<span class="mute">#${b}</span>`:`#${b} → <b class="${a<b?'gain':'loss'}">#${a}</b>`;
+ return `<div class="scroll"><table><thead><tr><th>Rank in league</th>${R.cols.map(k=>`<th class="num">${COLN[k]}</th>`).join('')}</tr></thead><tbody>
+ ${[A,B].map(t=>`<tr><td><b>${esc(t.mgr)}</b></td>${R.cols.map(k=>`<td class="num" style="${R.out[t.rid][k][0]!==R.out[t.rid][k][1]?'background:var(--bg2)':''}">${cell(R.out[t.rid][k])}</td>`).join('')}</tr>`).join('')}
+ </tbody></table></div>`}
+function rankChips(A,B,R){const ch=t=>R.cols.filter(k=>R.out[t.rid][k][0]!==R.out[t.rid][k][1]).map(k=>{const[b,a]=R.out[t.rid][k];return `<span class="pr">${COLN[k]} #${b} → <b class="${a<b?'gain':'loss'}">#${a}</b></span>`}).join('');
+ return `<div class="small mute" style="margin-top:2px">You</div><div class="pr-row" style="margin-top:2px">${ch(A)||'<span class="small mute">No rank changes</span>'}</div><div class="small mute" style="margin-top:6px">${esc(B.mgr)}</div><div class="pr-row" style="margin-top:2px">${ch(B)||'<span class="small mute">No rank changes</span>'}</div>`}
+function txChanged(){const c=S.calc;return([...c.give].sort().join('|')+'>'+[...c.get].sort().join('|'))!==c.tx.orig}
+function txActions(){const t=S.calc.tx,ch=txChanged();
+ return `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);text-align:left"><div class="small"><b>${t.incoming?'Incoming offer from':'Your offer to'} ${esc(t.mgr)}</b> <span class="mute">· ${new Date(t.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
+ ${ch?`<p class="small" style="color:var(--warn);margin:4px 0 0">Edited. ${t.incoming?'Send it as a counter: your version goes out and their original offer is declined.':'Send the revised offer: it goes out and your original is withdrawn.'} <a href="#" id="txReset">Reset</a></p>`:''}
+ <p id="txMsg" class="small" style="min-height:18px;margin:6px 0 0"></p>
+ <div class="row" style="margin-top:4px">${!S.tok?'<button class="btn mint" id="txConnect">Connect Sleeper</button>':ch?`<button class="btn mint" id="txCounter">${t.incoming?'Send counter':'Send revised offer'}</button>`:t.incoming?'<button class="btn mint" id="txAccept">Accept</button><button class="btn" id="txDecline">Decline</button><span class="small mute">or edit the assets to counter</span>':'<button class="btn" id="txWithdraw">Withdraw</button><span class="small mute">or edit the assets to revise</span>'}</div></div>`}
+function bindTxActions(give,get){const t=S.calc.tx,msg=h=>{const m=$('#txMsg');if(m)m.innerHTML=h};
+ const twoTap=(btn,label,fn)=>btn&&btn.addEventListener('click',async()=>{if(!btn.dataset.sure){btn.dataset.sure='1';btn.textContent='Tap again to '+label.toLowerCase();setTimeout(()=>{if(btn.isConnected){delete btn.dataset.sure;btn.textContent=label}},4000);return}
+  btn.disabled=true;btn.innerHTML='<span class="loading"></span>';try{await fn()}catch(er){btn.disabled=false;btn.textContent=label;msg(`<span class="loss">Sleeper said: ${esc(er.message)}</span>`)}});
+ $('#txConnect')?.addEventListener('click',openConnect);
+ $('#txReset')?.addEventListener('click',e=>{e.preventDefault();const[g,r]=t.orig.split('>');S.calc.give=g?g.split('|'):[];S.calc.get=r?r.split('|'):[];renderCalc()});
+ twoTap($('#txAccept'),'Accept',async()=>{await acceptTrade(t.id,t.leg);delete S.calc.tx;toast('Accepted');msg('<span class="gain"><b>Accepted.</b></span>');loadMine();openLeague(S.lg.league_id)});
+ twoTap($('#txDecline'),'Decline',async()=>{await rejectTrade(t.id,t.leg);delete S.calc.tx;toast('Declined');loadMine();renderCalc()});
+ twoTap($('#txWithdraw'),'Withdraw',async()=>{await rejectTrade(t.id,t.leg);delete S.calc.tx;toast('Withdrawn');loadMine();renderCalc()});
+ twoTap($('#txCounter'),t.incoming?'Send counter':'Send revised offer',async()=>{const o=S.byRid[S.calc.b];const nt=await sendTrade(o,give,get);
+  try{await rejectTrade(t.id,t.leg)}catch(er){msg(`<span style="color:var(--warn)">Your new offer went out, but the original could not be ${t.incoming?'declined':'withdrawn'} (${esc(er.message)}). Handle it in My trades.</span>`);delete S.calc.tx;loadMine();return}
+  S.calc.tx={id:String(nt.transaction_id),leg:nt.leg,incoming:false,mgr:o.mgr,orig:[...S.calc.give].sort().join('|')+'>'+[...S.calc.get].sort().join('|'),created:Date.now()};toast(t.incoming?'Counter sent':'Revised offer sent');loadMine();renderCalc()})}
 function renderIntel(give,get){
  const A=S.byRid[S.calc.a],B=S.byRid[S.calc.b];if(!A||!B||A===B){$('#intel').hidden=true;return}
  const ea=evalTeam(A,give,get),eb=evalTeam(B,get,give),na=needTerm(A,ea.after),nb=needTerm(B,eb.after);
@@ -696,7 +729,8 @@ function renderIntel(give,get){
   <div class="pr-row">${ch.length?ch.map(p=>`<span class="pr">${p} #${nd.moves[p][0]} → <b class="${nd.moves[p][1]<nd.moves[p][0]?'gain':'loss'}">#${nd.moves[p][1]}</b></span>`).join(''):'<span class="small mute">No positional rank changes</span>'}
   ${!isMe&&t.habits&&Math.abs(hb)>.05?`<span class="pr">${hb>0?'Fits':'Goes against'} their trade habits</span>`:''}</div></div>`};
  let oddsRow='';if(S.odds){const after=simOdds({[A.rid]:ea.dWin,[B.rid]:eb.dWin});const f=(t)=>{const b=S.odds[t.rid],a=after[t.rid];const d=(x,y)=>`${Math.round(x*100)}% → <b class="${y>x+.005?'gain':y<x-.005?'loss':''}">${Math.round(y*100)}%</b>`;return `<div class="pr-row"><span class="pr">${esc(t.mgr)} playoffs ${d(b.po,a.po)}</span><span class="pr">title ${d(b.ti,a.ti)}</span></div>`};oddsRow=`<h3 style="font-size:20px;margin:16px 0 4px">Season odds if this trade happens</h3>${f(A)}${f(B)}`}
- $('#intel').hidden=false;$('#intel').innerHTML=`<h3>Trade intelligence</h3><div class="grid2">${card(A,ea,na,true)}${card(B,eb,nb,false)}</div>${oddsRow}`}
+ const R=rankShift(A,B,give,get);
+ $('#intel').hidden=false;$('#intel').innerHTML=`<h3>Trade intelligence</h3><div class="grid2">${card(A,ea,na,true)}${card(B,eb,nb,false)}</div><h3 style="font-size:20px;margin:18px 0 6px">League ranks before and after</h3>${rankTableHtml(A,B,R)}${oddsRow}`}
 
 /* ---------- FINDER ---------- */
 let focus='ANY',mode='scan',target=null;
@@ -854,7 +888,8 @@ function propose(o,give,get){const me=S.myRid,dl=deadlineInfo();const url=`https
 /* ---------- MY TRADES ---------- */
 let mine=null,mineErr='';
 async function loadMine(){if(!S.lg||!S.tok){renderMine();return}mineErr='';$('#mineBody').innerHTML='<div class="card empty"><h3><span class="loading"></span> Loading your trades from Sleeper</h3></div>';
- try{mine=await listTrades()}catch(e){mine=null;mineErr=e.message}renderMine()}
+ try{mine=await listTrades()}catch(e){mine=null;mineErr=e.message}renderMine();mineBadge()}
+function mineBadge(){const a=$('#tabs a[data-v=mine]');if(!a)return;const n=(mine||[]).filter(t=>['proposed','pending'].includes(t.status)&&String(t.creator)!==String(S.user?.user_id)).length;a.innerHTML='My trades'+(n?` <span class="badge" style="background:var(--mint);color:var(--mintInk)">${n}</span>`:'')}
 function txSides(tx){const me=S.myRid,uid=S.user?.user_id;const other=(tx.roster_ids||[]).find(r=>r!==me);const get=[],give=[];
  const pickOf=(season,round,orig,to)=>{const a=S.assets[`P:${season}:${round}:${orig}`];return a||{kind:'pick',pos:'PICK',season:+season,name:`${season} ${ord(+round)}${S.byRid[orig]?' ('+S.byRid[orig].mgr+')':''}`,v:pickValue(+season,+round,null)}};
  for(const[sid,rid]of Object.entries(tx.adds||{})){const a=S.assets[sid]&&S.assets[sid].kind==='player'?S.assets[sid]:playerAsset(sid,null);(+rid===me?get:give).push(a)}
@@ -868,10 +903,11 @@ function renderMine(){const box=$('#mineBody');if(!box)return;
  if(!mine){box.innerHTML='';return}
  const pending=mine.filter(t=>['proposed','pending'].includes(t.status)).sort((a,b)=>b.created-a.created);
  const recent=mine.filter(t=>!['proposed','pending'].includes(t.status)).sort((a,b)=>(b.status_updated||b.created)-(a.status_updated||a.created)).slice(0,12);
- const card=(tx,live)=>{const s=txSides(tx);const E=edgeOf(s.give,s.get),p=E.p,g=grade(p);const rg=s.give.reduce((a,x)=>a+x.v,0),rt=s.get.reduce((a,x)=>a+x.v,0),rp=(rt-rg)/Math.max(rg,rt,1);
+ const card=(tx,live)=>{const s=txSides(tx);const E=edgeOf(s.give,s.get),p=E.p,g=grade(p);const R=live&&s.other?rankShift(S.byRid[S.myRid],s.other,s.give,s.get):null;
   return `<article class="deal ${live&&!s.mine?'smash':''}" data-tx="${esc(tx.transaction_id)}"><div class="deal-h"><span class="tag ${live&&!s.mine?'smash':''}">${live?(s.mine?'Outgoing':'Incoming'):esc(tx.status==='complete'?'Accepted':tx.status==='rejected'?'Declined or withdrawn':tx.status)}</span><div class="tm" style="gap:8px">${avatar(s.other)}${who(s.other)}</div></div>
   <div class="swap"><div><h4>You send</h4>${s.give.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabOut?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabOut}</span></div>`:''}</div><div><h4>You get</h4>${s.get.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabIn?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabIn}</span></div>`:''}</div></div>
-  <div class="row" style="justify-content:space-between"><span class="small mute">${new Date(tx.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · grade for you <b style="color:${gradeColor(g)}">${g}</b> (${pct(p)} adjusted, ${pct(rp)} raw)</span>
+  ${R?rankChips(S.byRid[S.myRid],s.other,R):''}
+  <div class="row" style="justify-content:space-between"><span class="small mute">${new Date(tx.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · grade for you <b style="color:${gradeColor(g)}">${g}</b><br>${edgeLine(E)}</span>
   ${live?`<span class="row" style="gap:6px"><button class="btn sm" data-calcfrom="${esc(tx.transaction_id)}">Open in calculator</button>${s.mine?`<button class="btn sm" data-withdraw="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Withdraw</button>`:`<button class="btn sm" data-decline="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Decline</button><button class="btn sm mint" data-accept="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Accept</button>`}</span>`:''}</div>${live&&!s.mine&&rosterRoom(s).over>0?`<p class="small" style="color:var(--warn);margin:0">Accepting puts you ${rosterRoom(s).over} over your roster limit. Sleeper will make you drop ${rosterRoom(s).over>1?'players':'a player'}, so accept this one in Sleeper.</p>`:''}</article>`};
  box.innerHTML=`<div class="sec-h"><div><h2>My trades</h2><p class="mute small">Live from Sleeper for ${esc(S.lg.name)}. Accept and Decline ask for a second tap.</p></div><div class="row"><button class="btn sm" id="mineRefresh">Refresh</button><button class="btn sm" id="mineSettings">Sleeper connection</button></div></div>
  <h3 style="font-size:24px;margin-bottom:10px">Pending (${pending.length})</h3>${pending.length?`<div class="results" style="margin-top:0">${pending.map(t=>card(t,true)).join('')}</div>`:'<div class="card empty" style="padding:24px"><p>No pending trades. Find one in the Smash finder.</p></div>'}
@@ -883,7 +919,7 @@ document.addEventListener('click',async e=>{
   ac.disabled=true;ac.innerHTML='<span class="loading"></span>';
   try{await acceptTrade(ac.dataset.accept,ac.dataset.leg);toast('Accepted');await loadMine();openLeague(S.lg.league_id)}
   catch(er){ac.disabled=false;ac.textContent='Accept';const card=ac.closest('.deal');const m=document.createElement('p');m.className='small loss';m.style.margin='0';m.innerHTML=`Sleeper said: ${esc(er.message)}. Accept it in <a href="https://sleeper.com/leagues/${S.lg.league_id}/trades" target="_blank" rel="noopener">Sleeper</a> for now.`;card.appendChild(m)}return}
- if(c){const tx=mine.find(t=>String(t.transaction_id)===c.dataset.calcfrom);const s=txSides(tx);S.calc={a:S.myRid,b:s.other.rid,give:s.give.filter(a=>a.id).map(a=>a.id),get:s.get.filter(a=>a.id).map(a=>a.id)};renderCalcTeams();renderCalc();location.hash='#calc';return}
+ if(c){const tx=mine.find(t=>String(t.transaction_id)===c.dataset.calcfrom);const s=txSides(tx);const give=s.give.filter(a=>a.id).map(a=>a.id),get=s.get.filter(a=>a.id).map(a=>a.id);S.calc={a:S.myRid,b:s.other.rid,give,get,tx:{id:String(tx.transaction_id),leg:tx.leg,incoming:!s.mine,mgr:s.other.mgr,orig:[...give].sort().join('|')+'>'+[...get].sort().join('|'),created:tx.created}};renderCalcTeams();renderCalc();location.hash='#calc';return}
  const b=w||d;if(!b)return;
  if(d&&!b.dataset.sure){b.dataset.sure='1';b.textContent='Tap again to decline';b.classList.add('mint');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='Decline';b.classList.remove('mint')}},4000);return}
  b.disabled=true;b.innerHTML='<span class="loading"></span>';
