@@ -128,6 +128,13 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--l
 @keyframes sp{to{transform:rotate(360deg)}}
 .tv{display:flex;gap:6px;align-items:baseline;justify-content:flex-end;white-space:nowrap;font-variant-numeric:tabular-nums}.tv small{color:var(--mute);font-size:11.5px}
 .bar2{height:8px;border-radius:6px;background:var(--line);overflow:hidden;display:flex}.bar2 i{display:block;height:100%}
+.banner{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;border-radius:14px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--line);background:var(--card)}
+.banner.closed{border-color:rgba(255,182,72,.5);background:rgba(255,182,72,.08)}.banner.urgent{border-color:var(--mint);background:rgba(0,212,180,.08)}
+.banner b{font-family:"Barlow Condensed";font-size:22px}
+.fig{position:relative;min-height:340px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.star{border:0;background:none;font-size:20px;line-height:1;width:34px;height:34px;border-radius:8px;color:var(--mute)}.star.on{color:var(--warn)}.star:hover{background:var(--line)}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700;white-space:nowrap}
+.mrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.mrow .nm{flex:1;line-height:1.25}.mrow .nm small{display:block;color:var(--mute);font-size:12px}
 footer{border-top:1px solid var(--line);color:var(--mute);font-size:13px;padding:22px 0 40px}
 footer a{color:#c4cde0}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -153,6 +160,8 @@ footer a{color:#c4cde0}
    <a href="#league" data-v="league">League</a>
    <a href="#calc" data-v="calc">Calculator</a>
    <a href="#finder" data-v="finder">Smash finder</a>
+   <a href="#market" data-v="market">Market</a>
+   <a href="#rookies" data-v="rookies">Rookie draft</a>
    <a href="#log" data-v="log">Trade log</a>
    <a href="#setup" data-v="setup">Settings</a>
   </nav>
@@ -174,6 +183,7 @@ footer a{color:#c4cde0}
 
  <section class="view" id="v-finder">
   <div class="sec-h"><div><h2>Smash finder</h2><p class="mute small">Scores every package against both rosters: lineups, positional needs, contend or rebuild window, and each manager's own trade habits.</p></div><button class="btn mint" id="runFinder">Find trades</button></div>
+  <div id="fDeadline"></div>
   <div class="card">
    <div class="seg" id="fMode" style="margin-bottom:14px"><button data-m="scan" class="on">Scan the league</button><button data-m="target">Get this player</button></div>
    <div id="targetBox" hidden style="margin-bottom:14px"><div class="small mute" style="font-weight:600;margin-bottom:6px">Player or pick you want</div><div class="picker" style="max-width:520px"><input id="targetPick" placeholder="Search any player on another roster" autocomplete="off"><div class="dd" id="ddT"></div></div><div id="targetSel" style="margin-top:8px"></div></div>
@@ -186,7 +196,7 @@ footer a{color:#c4cde0}
     <label class="scanOnly">Rank by<select id="fSort"><option value="ev">Best overall</option><option value="edge">Biggest edge</option><option value="odds">Most likely accepted</option></select></label>
     <label>Your window<select id="fWindow"><option value="auto">Auto detect</option><option value="contend">Contending</option><option value="middle">Middle</option><option value="rebuild">Rebuilding</option></select></label>
    </div>
-   <div id="focusBox" style="margin-top:14px"><div class="small mute" style="font-weight:600;margin-bottom:6px">I want to add</div><div class="seg" id="fFocus"><button data-p="ANY" class="on">Anything</button><button data-p="QB">QB</button><button data-p="RB">RB</button><button data-p="WR">WR</button><button data-p="TE">TE</button><button data-p="PICK">Picks</button><button data-p="SMASH">Smashes only</button></div></div>
+   <div id="focusBox" style="margin-top:14px"><div class="small mute" style="font-weight:600;margin-bottom:6px">I want to add</div><div class="seg" id="fFocus"><button data-p="ANY" class="on">Anything</button><button data-p="QB">QB</button><button data-p="RB">RB</button><button data-p="WR">WR</button><button data-p="TE">TE</button><button data-p="PICK">Picks</button><button data-p="WATCH">Watchlist</button><button data-p="SMASH">Smashes only</button></div></div>
    <div style="margin-top:14px"><div class="small mute" style="font-weight:600">Untouchable (tap to lock)</div><div class="locks" id="fLocks"></div></div>
    <div class="row" style="margin-top:14px"><label class="small"><input type="checkbox" id="fPicks" checked> Use draft picks</label><label class="small"><input type="checkbox" id="fRoster" checked> Respect roster spots</label></div>
    <div class="prog" id="fProg"><i></i></div>
@@ -195,6 +205,8 @@ footer a{color:#c4cde0}
   <div class="results" id="fResults"></div>
  </section>
 
+ <section class="view" id="v-market"><div id="marketBody"></div></section>
+ <section class="view" id="v-rookies"><div id="rookieBody"></div></section>
  <section class="view" id="v-log"><div id="logBody"></div></section>
 
  <section class="view" id="v-setup">
@@ -394,7 +406,7 @@ function buildModel(){
    const owner=own[`${season}:${r}:${orig.rid}`]??orig.rid,exact=slotOf[orig.rid],slot=exact||(season===start?orig.projSlot:null);
    const tier=slot?(slot<=n/3?'early':slot<=2*n/3?'mid':'late'):null;
    const name=exact?`${season} ${r}.${String(exact).padStart(2,'0')}`:`${season} ${ord(r)}${tier?' ('+tier+')':''}`;
-   const a={id:`P:${season}:${r}:${orig.rid}`,kind:'pick',pos:'PICK',season,round:r,orig:orig.rid,owner,tier,name,
+   const a={id:`P:${season}:${r}:${orig.rid}`,kind:'pick',pos:'PICK',season,round:r,orig:orig.rid,owner,tier,name,slot,exact:!!exact,
     sub:owner!==orig.rid?`via ${orig.mgr}`:(slot&&!exact?`own, proj. ${r}.${String(slot).padStart(2,'0')}`:'own pick'),v:pickValue(season,r,tier),rv:0,src:pickSrc(season,r,tier)};
    S.assets[a.id]=a;S.byRid[owner]?.assets.push(a)}}
  for(const t of S.teams){t.dyn=rosterDyn(t.assets);t.ps=posStrength(t.assets);t.pickV=t.assets.filter(a=>a.kind==='pick').reduce((s,a)=>s+a.v,0);
@@ -541,17 +553,18 @@ $('#connect').addEventListener('submit',async e=>{e.preventDefault();const un=$(
   const last=store.get('league');if(last&&lgs.some(l=>l.league_id===last))sel.value=last;
   await openLeague(sel.value)}catch(err){setStatus('');toast(err.message)}});
 $('#leagueSel').addEventListener('change',e=>openLeague(e.target.value));
-$('#meSel').addEventListener('change',e=>{S.myRid=+e.target.value;for(const t of S.teams)t.window=t.autoWindow;applyMyWindow();resetCalc();renderAll()});
+$('#meSel').addEventListener('change',e=>{S.myRid=+e.target.value;S.odds=simOdds();for(const t of S.teams)t.window=t.autoWindow;applyMyWindow();resetCalc();renderAll()});
 
 async function openLeague(lid){
  const tok=S.tok=(S.tok||0)+1;
  try{store.set('league',lid);S.myRid=null;S.hist=null;await loadLeague(lid,tok);resetCalc();
   $('#meSel').innerHTML=S.teams.map(t=>`<option value="${t.rid}">Viewing as ${esc(t.mgr)}</option>`).join('');$('#meSel').value=S.myRid;$('#meSel').hidden=false;
+  try{await loadSchedule();S.odds=simOdds()}catch(e){console.warn(e);S.sched=null;S.odds=null}if(tok!==S.tok)return;
   renderAll();if(!location.hash)location.hash='#league';
   $('#logBody').innerHTML='<div class="card empty"><h3><span class="loading"></span> Loading every season of trades</h3><p>Following the league back through each season and pricing every deal at the time and today.</p></div>';
   await loadHistory(tok);if(tok===S.tok)renderAll()}catch(err){if(err.message==='stale')return;setStatus('');toast(err.message);console.error(err)}}
 
-function renderAll(){renderChips();renderLeague();renderCalcTeams();renderCalc();renderFinderSetup();renderLog()}
+function renderAll(){renderChips();renderLeague();renderCalcTeams();renderCalc();renderFinderSetup();renderMarket();renderRookies();renderLog()}
 
 /* ---------- LEAGUE ---------- */
 const winLabel=w=>({contend:'Contending',rebuild:'Rebuilding',middle:'Middle'}[w]);
@@ -569,9 +582,9 @@ function renderLeague(){
  if(!S.lg)return;const n=S.teams.length,me=S.byRid[S.myRid];const key=RANKS[S.rankBy][1];
  const rows=[...S.teams].sort((a,b)=>a[key]-b[key]);
  const needs=POS.filter(p=>me.pr[p]>n*.6),str=POS.filter(p=>me.pr[p]<=n*.3);
- $('#leagueBody').innerHTML=`
+ $('#leagueBody').innerHTML=`${deadlineHtml()}
  <div class="sec-h"><div><h2>${esc(S.lg.name)}</h2><p class="mute small">${S.lg.season} season · ${esc(S.lg.status.replace('_',' '))} · ranked by ${RANKS[S.rankBy][0].toLowerCase()}</p></div>
-  <div class="seg" id="rankSeg">${Object.entries(RANKS).map(([k,[l]])=>`<button data-rank="${k}" class="${S.rankBy===k?'on':''}">${l}</button>`).join('')}</div></div>
+  <div class="row"><button class="btn sm" id="recapBtn">Group chat recap</button></div><div class="seg" id="rankSeg">${Object.entries(RANKS).map(([k,[l]])=>`<button data-rank="${k}" class="${S.rankBy===k?'on':''}">${l}</button>`).join('')}</div></div>
  <div class="grid2" style="margin-bottom:16px">
   <div class="card"><div class="row" style="justify-content:space-between"><div class="tm">${avatar(me)}${who(me)}</div><span class="badge w-${me.window}">${winLabel(me.window)}</span></div>
    <div class="stats" style="margin-top:14px"><div><b>#${me.strengthRank}</b><small>Roster strength</small></div><div><b>#${me.winRank}</b><small>Win now</small></div><div><b>#${me.dynPRank}</b><small>Dynasty players</small></div><div><b>#${me.pickVRank}</b><small>Pick capital</small></div></div>
@@ -583,20 +596,22 @@ function renderLeague(){
    ${rows.map(t=>`<tr class="click ${t.rid===S.myRid?'me':''}" data-team="${t.rid}"><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(t.mgr)}</b></td>${[...POS,'PICK'].map(p=>`<td><span class="rk" style="${rkStyle(t.pr[p],n)}">${t.pr[p]}</span></td>`).join('')}</tr>`).join('')}
    </tbody></table></div></div>
  </div>
- <div class="card"><div class="scroll"><table><thead><tr><th>#</th><th>Manager</th><th>Record</th><th>Window</th><th class="num">Strength</th><th class="num">Win now</th><th class="num">Dynasty players</th><th class="num hide-sm">Picks</th><th class="num hide-sm">Starter age</th><th class="hide-sm">Habits</th></tr></thead><tbody>
+ ${oddsHtml()}
+ ${windowHtml()}
+ <div class="card"><div class="scroll"><table><thead><tr><th>#</th><th>Manager</th><th>Record</th><th>Window</th><th class="num">Strength</th><th class="num">Win now</th><th class="num">Dynasty players</th><th class="num hide-sm">Picks</th><th class="num hide-sm">Starter age</th><th class="hide-sm num">Trades (1y)</th></tr></thead><tbody>
  ${rows.map(t=>`<tr class="click ${t.rid===S.myRid?'me':''}" data-team="${t.rid}"><td><b>${t[key]}</b></td><td><div class="tm">${avatar(t)}${who(t)}</div></td>
   <td class="num">${t.w}-${t.l}${t.tie?'-'+t.tie:''}</td><td><span class="badge w-${t.window}">${winLabel(t.window)}</span></td><td class="num">${(t.strength*100).toFixed(0)}</td><td class="num">#${t.winRank}</td><td class="num">#${t.dynPRank} <span class="mute small">${fmt(t.dynP)}</span></td><td class="num hide-sm">#${t.pickVRank} <span class="mute small">${fmt(t.pickV)}</span></td><td class="num hide-sm">${t.age.toFixed(1)}</td>
-  <td class="hide-sm">${(t.habits?.tags||[]).slice(0,2).map(x=>`<span class="badge habit">${esc(x)}</span>`).join(' ')||`<span class="small mute">${t.trades?t.trades+' trades':'No trades yet'}</span>`}</td></tr>`).join('')}
- </tbody></table></div></div>`}
+  <td class="hide-sm num">${t.trades}</td></tr>`).join('')}
+ </tbody></table></div></div>`;
+ $('#recapBtn').addEventListener('click',openRecap);drawWindowSoon()}
 document.addEventListener('click',e=>{const r=e.target.closest('[data-rank]');if(r){S.rankBy=r.dataset.rank;renderLeague();return}
  const el=e.target.closest('[data-team]');if(el)openTeam(+el.dataset.team)});
 
 function openTeam(rid){const t=S.byRid[rid];const st=new Set(lineup(t.assets,'rv').st.map(a=>a.id));
  const groups=[...POS,'PICK'].map(p=>{const list=t.assets.filter(a=>a.pos===p).sort((a,b)=>b.v-a.v);if(!list.length)return'';const mx=Math.max(...S.teams.flatMap(x=>x.assets).filter(a=>a.pos===p).map(a=>a.v),1);
-  return `<h3 style="font-size:20px;margin:16px 0 6px">${p==='PICK'?'Draft picks':p} <span class="mute small">rank #${t.pr[p]}</span></h3>${list.map(a=>`<div class="asset" style="margin-bottom:6px">${headshot(a)}<div class="nm">${esc(a.name)}${st.has(a.id)?' <span class="badge habit">Starter</span>':''}${a.rookie?' <span class="badge w-middle">Rookie</span>':''}<small>${a.kind==='pick'?esc(a.sub||''):`${esc(a.team)} · age ${a.age??'?'}${a.inj?' · '+esc(a.inj):''}`} · ${esc(srcLine(a))}</small><div class="bar2" style="margin-top:4px"><i style="width:${Math.min(100,a.v/mx*100)}%;background:var(--${p})"></i></div></div><b class="num">${fmt(a.v)}</b></div>`).join('')}`}).join('');
+  return `<h3 style="font-size:20px;margin:16px 0 6px">${p==='PICK'?'Draft picks':p} <span class="mute small">rank #${t.pr[p]}</span></h3>${list.map(a=>`<div class="asset" style="margin-bottom:6px">${headshot(a)}<div class="nm">${esc(a.name)}${st.has(a.id)?' <span class="badge habit">Starter</span>':''}${a.rookie?' <span class="badge w-middle">Rookie</span>':''}<small>${a.kind==='pick'?esc(a.sub||''):`${esc(a.team)} · age ${a.age??'?'}${a.inj?' · '+esc(a.inj):''}`} · ${esc(srcLine(a))}</small><div class="bar2" style="margin-top:4px"><i style="width:${Math.min(100,a.v/mx*100)}%;background:var(--${p})"></i></div></div><b class="num">${fmt(a.v)}</b>${a.kind==='player'?starBtn(a):''}</div>`).join('')}`}).join('');
  modal(`<div class="row" style="justify-content:space-between"><div class="tm">${avatar(t)}<div><h2>${esc(t.mgr)}</h2><div class="mute small">${t.name?esc(t.name)+' · ':''}${t.w}-${t.l} · ${winLabel(t.window)} · ${t.trades} trades in the last year</div></div></div><button class="x" data-close aria-label="Close">×</button></div>
- <div class="row" style="margin-top:10px">${(t.habits?.tags||[]).map(x=>`<span class="badge habit">${esc(x)}</span>`).join('')}</div>
- <div class="row" style="margin-top:10px">${t.rid!==S.myRid?`<button class="btn mint sm" data-calcwith="${t.rid}">Trade with ${esc(t.mgr)}</button><button class="btn sm" data-findwith="${t.rid}">Find smash trades with them</button>`:''}</div>${groups}`)}
+  <div class="row" style="margin-top:10px">${t.rid!==S.myRid?`<button class="btn mint sm" data-calcwith="${t.rid}">Trade with ${esc(t.mgr)}</button><button class="btn sm" data-findwith="${t.rid}">Find smash trades with them</button>`:''}</div>${groups}`)}
 document.addEventListener('click',e=>{const c=e.target.closest('[data-calcwith]');if(c){closeModal();S.calc.b=+c.dataset.calcwith;S.calc.get=[];renderCalcTeams();renderCalc();location.hash='#calc'}
  const f=e.target.closest('[data-findwith]');if(f){closeModal();setMode('scan');$('#fPartner').value=f.dataset.findwith;location.hash='#finder';runFinder()}});
 
@@ -666,7 +681,8 @@ function renderIntel(give,get){
   <div class="stats" style="margin-top:10px"><div><b class="${e.dWin>=0?'gain':'loss'}">${sgn(e.dWin)}</b><small>Lineup now</small></div><div><b class="${e.dDyn>=0?'gain':'loss'}">${sgn(e.dDyn)}</b><small>Roster value</small></div><div><b>${v}</b><small>For their window</small></div><div><b>${isMe?pct(mp):Math.round(odds*100)+'%'}</b><small>${isMe?'Market edge':'Accept odds'}</small></div></div>
   <div class="pr-row">${ch.length?ch.map(p=>`<span class="pr">${p} #${nd.moves[p][0]} → <b class="${nd.moves[p][1]<nd.moves[p][0]?'gain':'loss'}">#${nd.moves[p][1]}</b></span>`).join(''):'<span class="small mute">No positional rank changes</span>'}
   ${!isMe&&t.habits&&Math.abs(hb)>.05?`<span class="pr">${hb>0?'Fits':'Goes against'} their trade habits</span>`:''}</div></div>`};
- $('#intel').hidden=false;$('#intel').innerHTML=`<h3>Trade intelligence</h3><div class="grid2">${card(A,ea,na,true)}${card(B,eb,nb,false)}</div>`}
+ let oddsRow='';if(S.odds){const after=simOdds({[A.rid]:ea.dWin,[B.rid]:eb.dWin});const f=(t)=>{const b=S.odds[t.rid],a=after[t.rid];const d=(x,y)=>`${Math.round(x*100)}% → <b class="${y>x+.005?'gain':y<x-.005?'loss':''}">${Math.round(y*100)}%</b>`;return `<div class="pr-row"><span class="pr">${esc(t.mgr)} playoffs ${d(b.po,a.po)}</span><span class="pr">title ${d(b.ti,a.ti)}</span></div>`};oddsRow=`<h3 style="font-size:20px;margin:16px 0 4px">Season odds if this trade happens</h3>${f(A)}${f(B)}`}
+ $('#intel').hidden=false;$('#intel').innerHTML=`<h3>Trade intelligence</h3><div class="grid2">${card(A,ea,na,true)}${card(B,eb,nb,false)}</div>${oddsRow}`}
 
 /* ---------- FINDER ---------- */
 let focus='ANY',mode='scan',target=null;
@@ -682,6 +698,7 @@ function renderTarget(){$('#targetSel').innerHTML=target?`<div class="asset" sty
  $('#clearTarget')?.addEventListener('click',()=>{target=null;renderTarget()})}
 const lockKey=()=>'locks:'+(S.lg?.league_id||'')+':'+S.myRid;
 function renderFinderSetup(){
+ $('#fDeadline').innerHTML=deadlineHtml();
  if(!S.lg){$('#fResults').innerHTML='<div class="card empty" style="grid-column:1/-1"><h3>Load a league first</h3><p>The finder needs real rosters to work with.</p></div>';return}
  $('#fPartner').innerHTML='<option value="all">Every manager</option>'+S.teams.filter(t=>t.rid!==S.myRid).map(t=>`<option value="${t.rid}">${esc(tlabel(t))}</option>`).join('');
  const me=S.byRid[S.myRid],locks=new Set(store.get(lockKey(),[]));
@@ -701,14 +718,14 @@ async function runFinder(){
  running=true;const btn=$('#runFinder');btn.disabled=true;btn.innerHTML='<span class="loading"></span> Scanning';
  const me=S.byRid[S.myRid],locks=new Set(store.get(lockKey(),[]));
  const maxGive=+$('#fGive').value,maxGet=+$('#fGet').value,minEdge=+$('#fEdge').value/100,minP=+$('#fAcc').value/100,usePicks=$('#fPicks').checked,roster=$('#fRoster').checked;
- const partner=$('#fPartner').value,sortMode=$('#fSort').value;
+ const partner=$('#fPartner').value,sortMode=$('#fSort').value,watch=new Set(getWatch());
  const opps=mode==='target'?[S.byRid[target.owner]]:S.teams.filter(t=>t.rid!==me.rid&&(partner==='all'||t.rid===+partner));
  const mySets=sets(pool(me,{locks,picks:usePicks}),mode==='target'?3:maxGive).map(s=>({s,m:mkt(s)}));
  const prog=$('#fProg');prog.style.display='block';const bar=prog.firstElementChild;const out=[];let checked=0;
  for(let oi=0;oi<opps.length;oi++){const o=opps[oi];
   let theirSets;
   if(mode==='target'){const extra=pool(o,{locks:new Set([target.id]),picks:usePicks,n:10});theirSets=[[target],...extra.map(x=>[target,x])]}
-  else theirSets=sets(pool(o,{locks:new Set(),picks:usePicks}),maxGet).filter(s=>focus==='ANY'||focus==='SMASH'||s.some(a=>a.pos===focus));
+  else theirSets=sets(pool(o,{locks:new Set(),picks:usePicks}),maxGet).filter(s=>focus==='ANY'||focus==='SMASH'||(focus==='WATCH'?s.some(a=>watch.has(a.id)):s.some(a=>a.pos===focus)));
   theirSets=theirSets.map(s=>({s,m:mkt(s)}));
   for(const G of mySets)for(const T of theirSets){
    const hi=Math.max(G.m,T.m),edge=(T.m-G.m)/hi;
@@ -721,7 +738,7 @@ async function runFinder(){
    if(-edge<-S.floor)continue;
    const P=accept(o,-edge,theirU,nd.s,hb);if(P<minP)continue;
    const score=mode==='target'?P*.6-Math.max(0,-edge)*1.5+myU*.3:sortMode==='edge'?edge+myU*.5:sortMode==='odds'?P+myU*.3:myU*Math.sqrt(P)+.15*Math.max(0,Math.min(edge,.3));
-   out.push({o,give:G.s,get:T.s,edge,myU,theirU,P,em,eo,nd,hb,score})}
+   out.push({o,give:G.s,get:T.s,edge,myU,theirU,P,em,eo,nd,hb,score:score+(T.s.some(a=>watch.has(a.id))?.08:0)})}
   bar.style.width=((oi+1)/opps.length*100)+'%';await tick()}
  out.sort((a,b)=>b.score-a.score);
  const seen=new Set(),perOpp={},perGive={},perGet={},perHead={},final=[];
@@ -736,13 +753,13 @@ async function runFinder(){
  renderResults(final);prog.style.display='none';bar.style.width=0;btn.disabled=false;btn.textContent='Find trades';running=false}
 
 function classify(r){if(r.edge>=S.smash)return['Smash','smash'];if(mode==='target')return[r.edge>=0?'Value':'Pay up',''];
- if(Math.abs(r.edge)<.06&&r.theirU>0&&r.myU>0)return['Win win',''];if(r.give.length>r.get.length)return['Consolidate',''];if(r.get.length>r.give.length)return['Depth play',''];return['Value','']}
+ if(Math.abs(r.edge)<.06&&r.theirU>0&&r.myU>0)return['Win win',''];if(r.give.length>r.get.length)return['Consolidate',''];return['Value','']}
 function why(r){const me=S.byRid[S.myRid],o=r.o,parts=[];
  const up=POS.filter(p=>r.nd.moves[p][1]<r.nd.moves[p][0]-1).sort((a,b)=>(r.nd.moves[b][0]-r.nd.moves[b][1])-(r.nd.moves[a][0]-r.nd.moves[a][1]));
  if(up[0])parts.push(`${o.mgr} goes from #${r.nd.moves[up[0]][0]} to #${r.nd.moves[up[0]][1]} at ${up[0]}`);
  if(o.window==='contend'&&r.eo.dWin>0)parts.push(`their lineup gains ${fmt(r.eo.dWin)} for a title push`);
  if(o.window==='rebuild'&&r.give.some(a=>a.kind==='pick'||(a.age&&a.age<=24)))parts.push('it fits their rebuild');
- if(r.hb>.05&&o.habits?.tags.length)parts.push(`matches their habits (${o.habits.tags.slice(0,2).join(', ').toLowerCase()})`);
+ if(r.hb>.05)parts.push('it fits how they have traded before');
  const mn=needTerm(me,r.em.after);const mup=POS.filter(p=>mn.moves[p][1]<=mn.moves[p][0]-2);
  if(mup.length)parts.push(`you climb at ${mup.join(' and ')}`);
  if(r.em.dWin>0&&me.window==='contend')parts.push(`your lineup adds ${fmt(r.em.dWin)}`);
@@ -762,19 +779,15 @@ $('#fResults').addEventListener('click',e=>{const p=e.target.closest('[data-prop
  if(l){const r=S.lastResults[+l.dataset.load];S.calc={a:S.myRid,b:r.o.rid,give:r.give.map(a=>a.id),get:r.get.map(a=>a.id)};renderCalcTeams();renderCalc();location.hash='#calc'}});
 
 /* ---------- PROPOSE ---------- */
-function pitch(o,give,get){const names=a=>a.map(x=>x.name).join(' and ');const eo=evalTeam(o,get,give),nd=needTerm(o,eo.after);
- const jump=POS.map(p=>({p,b:nd.moves[p][0],a:nd.moves[p][1]})).filter(x=>x.a<x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a))[0];
- let line='';if(jump)line=` It moves you from #${jump.b} to #${jump.a} in the league at ${jump.p}.`;else if(o.window==='contend'&&eo.dWin>0)line=' It makes your starting lineup better right now.';else if(o.window==='rebuild')line=' It gets you younger for the rebuild.';
- return `Hey ${o.mgr}, I've got a trade idea for you. I send ${names(give)} for ${names(get)}.${line} Open to tweaks if you want to counter.`}
-function propose(o,give,get){const me=S.byRid[S.myRid],url=`https://sleeper.com/leagues/${S.lg.league_id}`;
+function propose(o,give,get){const me=S.byRid[S.myRid],url=`https://sleeper.com/leagues/${S.lg.league_id}`;const dl=deadlineInfo();
+ const txt=`${me.mgr} sends ${give.map(a=>a.name).join(', ')}\n${o.mgr} sends ${get.map(a=>a.name).join(', ')}`;
  modal(`<div class="row" style="justify-content:space-between"><h2>Send to ${esc(o.mgr)}</h2><button class="x" data-close aria-label="Close">×</button></div>
+ ${dl&&!dl.open?`<p class="small" style="color:var(--warn);margin:6px 0 0">${esc(dl.text)}. Save this one for the offseason.</p>`:''}
  <div class="swap" style="margin-top:12px"><div><h4 class="small mute">${esc(me.mgr)} sends</h4>${give.map(miniRow).join('')}</div><div><h4 class="small mute">${esc(o.mgr)} sends</h4>${get.map(miniRow).join('')}</div></div>
- <label class="small mute" style="display:block;margin-top:14px;font-weight:600" for="pitchTxt">Message to send with it</label><textarea id="pitchTxt">${esc(pitch(o,give,get))}</textarea>
- <div class="row" style="margin-top:12px"><button class="btn mint" id="copyPitch">Copy trade + message</button><a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="${url}" target="_blank" rel="noopener">Open league in Sleeper</a></div>
- <ol class="steps"><li>Copy, then open the league in Sleeper.</li><li>Team tab, then Trade, then pick ${esc(o.mgr)} and tap the assets above.</li><li>Paste the message in the trade note or DM and send.</li></ol>
+ <div class="row" style="margin-top:14px"><button class="btn mint" id="copyPitch">Copy trade</button><a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="${url}" target="_blank" rel="noopener">Open league in Sleeper</a></div>
+ <ol class="steps"><li>Open the league in Sleeper, then Team, then Trade.</li><li>Pick ${esc(o.mgr)} and tap the assets above.</li></ol>
  <p class="small mute" style="margin-top:10px">One tap sending is coming through a small browser extension that runs on sleeper.com with your own login.</p>`);
- $('#copyPitch').addEventListener('click',async()=>{const txt=`TRADE: ${me.mgr} sends ${give.map(a=>a.name).join(', ')} | ${o.mgr} sends ${get.map(a=>a.name).join(', ')}\n\n${$('#pitchTxt').value}`;
-  try{await navigator.clipboard.writeText(txt);toast('Copied')}catch{$('#pitchTxt').select();toast('Select and copy the message')}})}
+ $('#copyPitch').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(txt);toast('Copied')}catch{toast('Copy blocked by the browser')}})}
 
 /* ---------- LOG ---------- */
 let logSort='recent',logMgr='all',logSeason='all';
@@ -787,13 +800,13 @@ function renderLog(){
    const oth=tr.sides.filter(s=>s!==me);const gT=me.mThen-oth.reduce((a,s)=>a+s.mThen,0)/(oth.length||1),gN=me.mNow-oth.reduce((a,s)=>a+s.mNow,0)/(oth.length||1);then+=gT;now+=gN;if(!best||gN>best.g)best={g:gN,tr}}
   return{t,n,then,now,best}}).filter(x=>x.n).sort((a,b)=>b.now-a.now);
  let list=all.filter(tr=>(logMgr==='all'||tr.sides.some(s=>s.owner===logMgr))&&(logSeason==='all'||tr.season===logSeason));
- if(logSort==='lop')list=[...list].sort((a,b)=>b.gap-a.gap);if(logSort==='swing')list=[...list].sort((a,b)=>b.swing-a.swing);if(logSort==='fair')list=[...list].filter(t=>t.sides.every(s=>s.mNow>500)).sort((a,b)=>a.lop-b.lop);
+ if(logSort==='lop')list=[...list].sort((a,b)=>b.gap-a.gap);if(logSort==='swing')list=[...list].sort((a,b)=>b.swing-a.swing);
  const mx=Math.max(...board.map(b=>Math.abs(b.now)),1);
  $('#logBody').innerHTML=`<div class="sec-h"><div><h2>Trade log</h2><p class="mute small">${all.length} trades across ${S.hist.seasons.length} season${S.hist.seasons.length>1?'s':''}. Each side is valued at the time of the deal and today. Draft picks that were used show the player taken.</p></div></div>
  ${board.length?`<div class="card" style="margin-bottom:16px"><h3 style="font-size:22px;margin-bottom:8px">Who has won their trades</h3><div class="scroll"><table><thead><tr><th>Manager</th><th class="num">Trades</th><th class="num">Net at the time</th><th class="num">Net today</th><th class="hide-sm" style="width:30%">Hindsight</th></tr></thead><tbody>
   ${board.map(b=>`<tr class="${b.t.rid===S.myRid?'me':''}"><td><div class="tm">${avatar(b.t)}${who(b.t)}</div></td><td class="num">${b.n}</td><td class="num ${b.then>=0?'gain':'loss'}">${sgn(b.then)}</td><td class="num ${b.now>=0?'gain':'loss'}"><b>${sgn(b.now)}</b></td><td class="hide-sm"><div class="bar2" style="justify-content:${b.now>=0?'flex-start':'flex-end'}"><i style="width:${Math.abs(b.now)/mx*100}%;background:${b.now>=0?'var(--gain)':'var(--loss)'}"></i></div></td></tr>`).join('')}
  </tbody></table></div></div>`:''}
- <div class="row" style="margin-bottom:14px"><div class="seg" id="logSort">${[['recent','Most recent'],['lop','Biggest wins today'],['swing','Biggest swing since'],['fair','Fairest']].map(([k,l])=>`<button data-ls="${k}" class="${logSort===k?'on':''}">${l}</button>`).join('')}</div>
+ <div class="row" style="margin-bottom:14px"><div class="seg" id="logSort">${[['recent','Most recent'],['lop','Biggest wins today'],['swing','Biggest swing since']].map(([k,l])=>`<button data-ls="${k}" class="${logSort===k?'on':''}">${l}</button>`).join('')}</div>
   <select class="field" id="logMgr" style="min-height:38px;padding:6px 10px"><option value="all">All managers</option>${S.teams.map(t=>`<option value="${esc(t.owner)}" ${logMgr===t.owner?'selected':''}>${esc(t.mgr)}</option>`).join('')}</select>
   ${S.hist.seasons.length>1?`<select class="field" id="logSeason" style="min-height:38px;padding:6px 10px"><option value="all">All seasons</option>${S.hist.seasons.map(s=>`<option ${logSeason===s?'selected':''}>${s}</option>`).join('')}</select>`:''}</div>
  ${list.length?`<div class="results" style="margin-top:0">${list.slice(0,80).map(tradeCard).join('')}</div>`:'<div class="card empty"><h3>No trades match</h3></div>'}
@@ -807,9 +820,153 @@ function tradeCard(tr){
  const thenV=tr.lopThen<.06||!tr.gapThen?'Even at the time':`${winThen2.mgr} was up ${fmt(tr.gapThen)} at the time`;
  return `<article class="deal ${tr.fleece?'smash':''}"><div class="deal-h"><span class="small mute">${new Date(tr.t).toLocaleDateString()} · ${esc(tr.season)}</span><span class="tag ${tr.fleece?'smash':''}">${tr.fleece?'Fleece':tr.lop<.06?'Fair':'Edge'}</span></div>
  ${tr.sides.map(s=>`<div><div class="row" style="justify-content:space-between"><div class="tm" style="gap:8px">${avatar(s)}${who(s)}</div><div class="tv"><small>then</small>${fmt(s.mThen)}<small>now</small><b class="${s===winNow2&&tr.lop>=.06?'gain':''}">${fmt(s.mNow)}</b></div></div>
-  <div style="margin-top:6px">${s.got.map(it=>`<div class="mini">${posTag(itemPos(it))}<span class="n">${esc(itemName(it))}${it.became?` <small>became ${esc(S.P?.[it.became]?.n||'player')}</small>`:''}</span><span class="tv"><small>${fmt(it.then)} ${it.thenSrc!=='none'?it.thenSrc:''}</small><b>${fmt(it.now)}</b></span></div>`).join('')||'<span class="small mute">Nothing</span>'}${s.faab?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faab}</span></div>`:''}</div></div>`).join('<hr style="border:0;border-top:1px dashed var(--line);margin:2px 0">')}
+  <div style="margin-top:6px">${s.got.map(it=>`<div class="mini">${posTag(itemPos(it))}<span class="n">${esc(itemName(it))}${it.became?` <small>became ${esc(S.P?.[it.became]?.n||'player')}</small>`:''}</span></div>`).join('')||'<span class="small mute">Nothing</span>'}${s.faab?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faab}</span></div>`:''}</div></div>`).join('<hr style="border:0;border-top:1px dashed var(--line);margin:2px 0">')}
  <div class="bar2">${tr.sides.map((s,i)=>`<i style="width:${s.shNow*100}%;background:${['var(--mint)','var(--violet)','var(--warn)','var(--WR)'][i%4]}"></i>`).join('')}</div>
  <p class="why"><b style="color:var(--ink)">${esc(verdict)}.</b> ${esc(thenV)}.</p></article>`}
+
+/* ---------- DEADLINE ---------- */
+function deadlineInfo(){
+ const lg=S.lg;if(!lg)return null;const dl=lg.settings?.trade_deadline;
+ if(lg.status!=='in_season')return{open:true,text:lg.status==='complete'?'Offseason, trades open':'Trades open',sub:''};
+ if(!dl||dl>=99)return{open:true,text:'No trade deadline in this league',sub:''};
+ const W=+S.state.week||1,now=new Date(),d=new Date(now);d.setDate(d.getDate()+((1-d.getDay()+7)%7));d.setHours(23,59,0,0);
+ const end=new Date(d.getTime()+7*864e5*(dl-W));
+ if(end<now)return{open:false,text:`Trade deadline passed (Week ${dl})`,sub:'Trades reopen after the season. The finder still works for lining up offseason deals.'};
+ const ms=end-now,days=Math.floor(ms/864e5),hrs=Math.floor(ms%864e5/36e5);
+ return{open:true,urgent:days<3,text:`Trade deadline: ${days?days+'d ':''}${hrs}h left`,sub:`Closes after the last game of Week ${dl}, around ${end.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})} night.`}}
+function deadlineHtml(){const d=deadlineInfo();if(!d)return'';return `<div class="banner ${d.open?(d.urgent?'urgent':''):'closed'}"><b>${esc(d.text)}</b><span class="small mute">${esc(d.sub)}</span></div>`}
+
+/* ---------- SEASON SIM: playoff and title odds ---------- */
+async function loadSchedule(){
+ const lg=S.lg;S.sched=null;if(lg.status!=='in_season')return;
+ const ps=lg.settings.playoff_week_start||15,last=lg.settings.last_scored_leg||0;
+ const res=await Promise.all(Array.from({length:ps-1},(_,i)=>api(`league/${lg.league_id}/matchups/${i+1}`).catch(()=>[])));
+ const pairs={},scores={};
+ res.forEach((arr,i)=>{const w=i+1,g={};for(const m of arr||[]){if(m.matchup_id==null)continue;(g[m.matchup_id]=g[m.matchup_id]||[]).push(m);if(w<=last&&m.points>0)(scores[m.roster_id]=scores[m.roster_id]||[]).push(m.points)}
+  pairs[w]=Object.values(g).filter(x=>x.length===2).map(x=>[x[0].roster_id,x[1].roster_id,x[0].points,x[1].points])});
+ S.sched={pairs,scores,last,ps,cur:+S.state.week}}
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function bracketOrder(P){let B=1;while(B<P)B*=2;let o=[1];while(o.length<B){const m=o.length*2+1;o=o.flatMap(x=>[x,m-x])}return o}
+function simOdds(over={},N=5000){
+ const s=S.sched;if(!s||!S.teams.length)return null;const teams=S.teams,n=teams.length;
+ const all=Object.values(s.scores).flat(),M=all.length?all.reduce((a,b)=>a+b,0)/all.length:120;
+ let ss=0,c=0;for(const arr of Object.values(s.scores)){const m=arr.reduce((a,b)=>a+b,0)/arr.length;for(const x of arr){ss+=(x-m)**2;c++}}const SD=c>10?Math.sqrt(ss/c):25;
+ const meanWin=teams.reduce((a,t)=>a+t.win,0)/n||1,mu={};
+ for(const t of teams){const arr=s.scores[t.rid]||[],ppg=arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:M,wt=Math.min(.7,arr.length/14);
+  mu[t.rid]=wt*ppg+(1-wt)*M*t.win/meanWin+0.8*M*(over[t.rid]||0)/meanWin}
+ const P=Math.min(S.lg.settings.playoff_teams||6,n),rt=S.lg.settings.playoff_round_type||0,rids=teams.map(t=>t.rid),out={};
+ for(const r of rids)out[r]={po:0,ti:0,bye:0,seed:0};
+ const fixed=[],sim=[];for(let w=s.last+1;w<s.ps;w++)for(const p of s.pairs[w]||[])(w<s.cur&&p[2]>0&&p[3]>0?fixed:sim).push(p);
+ const bW={},bF={};for(const t of teams){bW[t.rid]=t.w+t.tie/2;bF[t.rid]=t.fpts}
+ const order=bracketOrder(P),R=rng(20261124);
+ const g=r=>{const u=R()||1e-9,v=R();return mu[r]+SD*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v)};
+ for(let i=0;i<N;i++){const W={...bW},F={...bF};
+  for(const p of fixed){W[p[2]>p[3]?p[0]:p[1]]++;F[p[0]]+=p[2];F[p[1]]+=p[3]}
+  for(const p of sim){const a=g(p[0]),b=g(p[1]);W[a>b?p[0]:p[1]]++;F[p[0]]+=a;F[p[1]]+=b}
+  const seeds=rids.slice().sort((x,y)=>W[y]-W[x]||F[y]-F[x]);seeds.forEach((r,k)=>out[r].seed+=k+1);
+  const po=seeds.slice(0,P);po.forEach(r=>out[r].po++);
+  let round=order.map(sd=>sd<=P?po[sd-1]:null),rn=0;
+  while(round.length>1){rn++;const two=rt===2||(rt===1&&round.length===2),nx=[];
+   for(let k=0;k<round.length;k+=2){const a=round[k],b=round[k+1];if(a==null)nx.push(b);else if(b==null){nx.push(a);if(rn===1)out[a].bye++}else{const sa=g(a)+(two?g(a):0),sb=g(b)+(two?g(b):0);nx.push(sa>sb?a:b)}}round=nx}
+  if(round[0]!=null)out[round[0]].ti++}
+ for(const r of rids){out[r].po/=N;out[r].ti/=N;out[r].bye/=N;out[r].seed/=N}
+ return out}
+function oddsHtml(){
+ if(!S.odds)return'';const rows=[...S.teams].sort((a,b)=>S.odds[b.rid].po-S.odds[a.rid].po||S.odds[b.rid].ti-S.odds[a.rid].ti);
+ const P=S.lg.settings.playoff_teams||6,left=S.sched.ps-1-Math.max(S.sched.last,S.sched.cur-1);
+ const pc=x=>x>=.995?'99%':x<.005?'<1%':Math.round(x*100)+'%';
+ return `<div class="card" style="margin-bottom:16px"><div class="sec-h" style="margin-bottom:6px"><div><h3 style="font-size:24px">Playoff and title odds</h3><p class="small mute">5,000 simulations of the remaining schedule${left>0?` (${left} regular season week${left>1?'s':''} left)`:''} and a ${P} team bracket. Weekly scores come from points so far blended with current lineup strength.</p></div></div>
+ <div class="scroll"><table><thead><tr><th>Manager</th><th class="num">Record</th><th class="num">Avg seed</th><th class="num">Playoffs</th><th class="num hide-sm">Bye</th><th class="num">Title</th><th class="hide-sm" style="width:26%"></th></tr></thead><tbody>
+ ${rows.map(t=>{const o=S.odds[t.rid];return `<tr class="${t.rid===S.myRid?'me':''}"><td><div class="tm">${avatar(t)}${who(t)}</div></td><td class="num">${t.w}-${t.l}${t.tie?'-'+t.tie:''}</td><td class="num">${o.seed.toFixed(1)}</td><td class="num"><b>${pc(o.po)}</b></td><td class="num hide-sm">${pc(o.bye)}</td><td class="num"><b>${pc(o.ti)}</b></td><td class="hide-sm"><div class="bar2"><i style="width:${o.po*100}%;background:var(--violet)"></i></div><div class="bar2" style="margin-top:3px"><i style="width:${o.ti*100}%;background:var(--mint)"></i></div></td></tr>`}).join('')}
+ </tbody></table></div><p class="small mute" style="margin:8px 0 0">Purple bar: playoffs. Mint bar: title. The calculator shows how any trade moves these.</p></div>`}
+
+/* ---------- DYNASTY WINDOW ---------- */
+function ageStep(pos,age){if(!age)return 1;
+ if(pos==='QB')return age<25?1.06:age<32?1:age<35?.9:.75;if(pos==='RB')return age<23?1.08:age<26?.97:age<27?.85:age<28?.75:.65;
+ if(pos==='WR')return age<24?1.08:age<28?1:age<30?.9:.78;if(pos==='TE')return age<25?1.08:age<29?1:age<31?.9:.78;return 1}
+function windowRanks(){
+ const Y=+S.lg.season,ks=[0,1,2];const sc=S.teams.map(t=>ks.map(k=>{
+  const pl=t.assets.filter(a=>a.kind==='player').map(a=>{let v=a.v;for(let i=0;i<k;i++)v*=ageStep(a.pos,(a.age||26)+i);return{...a,v}});
+  let s=lineup(pl,'v').sum;for(const a of t.assets)if(a.kind==='pick'&&a.season<=Y+k)s+=a.v*(a.season===Y+k?.35:.55);return s}));
+ const ranks=S.teams.map((t,i)=>ks.map(k=>rankOf(sc[i][k],sc.map(x=>x[k]))));
+ return{years:ks.map(k=>Y+k),ranks}}
+function windowHtml(){if(!S.teams.length)return'';const w=windowRanks();S.win=w;const i=S.teams.findIndex(t=>t.rid===S.myRid),mr=w.ranks[i];
+ return `<div class="card" style="margin-bottom:16px"><div class="sec-h" style="margin-bottom:4px"><div><h3 style="font-size:24px">Dynasty window</h3><p class="small mute">Projected lineup strength rank by season, aging every player on a position curve and counting picks as they become players. You: ${mr.map((r,k)=>`#${r} in ${w.years[k]}`).join(', ')}.</p></div></div>
+ <div class="fig" style="min-height:${Math.max(300,S.teams.length*24+60)}px"><svg id="winSvg" role="img" aria-label="Projected strength rank by season for each team"></svg></div></div>`}
+let winRO=null;
+function drawWindowSoon(){const s=$('#winSvg');if(!s)return;if(winRO)winRO.disconnect();winRO=new ResizeObserver(drawWindow);winRO.observe(s)}
+function drawWindow(){const s=$('#winSvg');if(!s||!S.win)return;const W=s.clientWidth,H=s.clientHeight,n=S.teams.length,narrow=W<520;
+ const pl=narrow?30:44,pr=narrow?112:170,pt=14,pb=30,x=k=>pl+(W-pl-pr)*k/2,y=r=>pt+(H-pt-pb)*(r-1)/(n-1||1);
+ let h='';for(let k=0;k<3;k++)h+=`<line x1="${x(k)}" x2="${x(k)}" y1="${pt}" y2="${H-pb}" stroke="var(--line)"/><text x="${x(k)}" y="${H-8}" fill="var(--mute)" font-size="12" text-anchor="middle">${S.win.years[k]}</text>`;
+ for(let r=1;r<=n;r++)h+=`<text x="${pl-10}" y="${y(r)+4}" fill="var(--mute)" font-size="11" text-anchor="end">${r}</text>`;
+ const draw=(t,i,me)=>{const rk=S.win.ranks[i];const pts=rk.map((r,k)=>`${x(k)},${y(r)}`).join(' ');
+  return `<polyline points="${pts}" fill="none" stroke="${me?'var(--mint)':'#4a5568'}" stroke-width="${me?3.5:1.6}" stroke-linejoin="round"/>${rk.map((r,k)=>`<circle cx="${x(k)}" cy="${y(r)}" r="${me?5:3}" fill="${me?'var(--mint)':'#4a5568'}"/>`).join('')}
+  <text x="${x(2)+10}" y="${y(rk[2])+4}" fill="${me?'var(--mint)':'#9aa6bb'}" font-size="${me?13:12}" font-weight="${me?700:500}">${esc(String(t.mgr).slice(0,narrow?11:20))}</text>`};
+ S.teams.forEach((t,i)=>{if(t.rid!==S.myRid)h+=draw(t,i,false)});const mi=S.teams.findIndex(t=>t.rid===S.myRid);if(mi>=0)h+=draw(S.teams[mi],mi,true);
+ s.setAttribute('viewBox',`0 0 ${W} ${H}`);s.innerHTML=h}
+
+/* ---------- GROUP CHAT RECAP ---------- */
+function recapText(){const lg=S.lg,wk=S.state?.display_week||S.state?.week;const rows=[...S.teams].sort((a,b)=>a.strengthRank-b.strengthRank);
+ const L=[`${lg.name} power rankings, Week ${wk}`,''];
+ rows.forEach((t,i)=>{const o=S.odds?.[t.rid];L.push(`${i+1}. ${t.mgr}${t.name?' ('+t.name+')':''}, ${t.w}-${t.l}${t.tie?'-'+t.tie:''}${o?`, playoffs ${Math.round(o.po*100)}%, title ${Math.round(o.ti*100)}%`:''}`)});
+ if(S.hist&&S.hist.trades.length){const best=[...S.hist.trades].filter(t=>+t.season===+lg.season).sort((a,b)=>b.gap-a.gap).slice(0,3);
+  if(best.length){L.push('','Most lopsided trades this season, by today\'s values:');for(const tr of best){const w=[...tr.sides].sort((a,b)=>b.mNow-a.mNow);L.push(`${w[0].mgr} up ${fmt(tr.gap)} on ${w[1]?.mgr||'the field'}: got ${w[0].got.map(itemName).join(', ')||'nothing'}`)}}}
+ const d=deadlineInfo();if(d)L.push('',d.text+'.');L.push('','Made with Trade Lab: cadensmith04.github.io/trade-lab');return L.join('\n')}
+function openRecap(){modal(`<div class="row" style="justify-content:space-between"><h2>Group chat recap</h2><button class="x" data-close aria-label="Close">×</button></div><p class="small mute" style="margin:4px 0 10px">Edit anything, then copy it into the league chat.</p><textarea id="recapTxt" style="min-height:320px">${esc(recapText())}</textarea><div class="row" style="margin-top:12px"><button class="btn mint" id="copyRecap">Copy recap</button></div>`);
+ $('#copyRecap').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#recapTxt').value);toast('Copied')}catch{$('#recapTxt').select();toast('Select and copy the text')}})}
+
+/* ---------- WATCHLIST ---------- */
+const watchKey=()=>'watch:'+(S.lg?.league_id||'');
+const getWatch=()=>store.get(watchKey(),[]);
+function toggleWatch(id){const w=new Set(getWatch());w.has(id)?w.delete(id):w.add(id);store.set(watchKey(),[...w]);renderMarket();toast(w.has(id)?'Added to watchlist':'Removed from watchlist')}
+const starBtn=a=>`<button class="star ${getWatch().includes(a.id)?'on':''}" data-watch="${esc(a.id)}" aria-label="Watch ${esc(a.name)}" title="Watchlist">${getWatch().includes(a.id)?'★':'☆'}</button>`;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-watch]');if(b){e.stopPropagation();toggleWatch(b.dataset.watch);b.classList.toggle('on');b.textContent=b.classList.contains('on')?'★':'☆'}
+ const t=e.target.closest('[data-tradefor]');if(t){target=S.assets[t.dataset.tradefor];setMode('target');renderTarget();location.hash='#finder';runFinder()}
+ const c=e.target.closest('[data-tocalc]');if(c){const a=S.assets[c.dataset.tocalc];if(a.owner===S.myRid){S.calc.give.push(a.id)}else{if(a.owner&&S.byRid[a.owner]){if(S.calc.b!==a.owner){S.calc.b=a.owner;S.calc.get=[]}}else{S.calc.b='any';S.calc.get=[]}S.calc.get.push(a.id)}renderCalcTeams();renderCalc();location.hash='#calc'}});
+
+/* ---------- MARKET ---------- */
+let wwPos='ALL',wwKey='v';
+function trendPct(a){const f=a.src?.fc;if(!f||!a.trend||f-a.trend<400)return 0;const x=a.trend/(f-a.trend);return Math.abs(x)>3?0:x}
+const isOld=a=>a.pos==='RB'?a.age>=26:a.pos==='QB'?a.age>=32:a.pos==='TE'?a.age>=29:a.age>=28;
+function mRow(a,note){const own=a.owner&&S.byRid[a.owner];const tp=trendPct(a);
+ return `<div class="mrow">${starBtn(a)}${headshot(a)}<div class="nm">${esc(a.name)} ${posTag(a.pos)}<small>${esc(a.team)} · age ${a.age??'?'} · ${own?(a.owner===S.myRid?'Your roster':esc(own.mgr)):'Free agent'}${note?' · '+note:''}</small></div>
+ ${tp?`<span class="pill" style="background:${tp>0?'rgba(47,214,142,.15)':'rgba(255,93,110,.15)'};color:${tp>0?'var(--gain)':'var(--loss)'}">${pct(tp)} 30d</span>`:''}<b class="num" style="min-width:52px">${fmt(a.v)}</b>
+ ${own&&a.owner!==S.myRid?`<button class="btn sm" data-tradefor="${esc(a.id)}">Trade for</button>`:`<button class="btn sm" data-tocalc="${esc(a.id)}">${a.owner===S.myRid?'Shop':'Calc'}</button>`}</div>`}
+function renderMarket(){
+ const box=$('#marketBody');if(!S.lg){box.innerHTML='<div class="card empty"><h3>No league loaded</h3><p>Load a league to see buy low targets, sell high candidates and the best free agents.</p></div>';return}
+ const ownerOf={};for(const t of S.teams)for(const a of t.assets)if(a.kind==='player')ownerOf[a.sid]=t.rid;
+ const all=Object.keys(S.V).map(sid=>{const a=S.assets[sid]||(S.assets[sid]=playerAsset(sid,null));a.owner=ownerOf[sid]??null;return a}).filter(a=>POS.includes(a.pos));
+ const buy=all.filter(a=>a.owner!==S.myRid&&a.v>=1500&&trendPct(a)<=-.08&&(a.age||30)<=26).sort((x,y)=>trendPct(x)-trendPct(y)).slice(0,12);
+ const sell=all.filter(a=>a.owner===S.myRid&&a.v>=1000&&(trendPct(a)>=.08||(isOld(a)&&trendPct(a)>=0))).sort((x,y)=>trendPct(y)-trendPct(x)).slice(0,12);
+ const me=S.byRid[S.myRid];const worst={};for(const p of POS){const mine=me.assets.filter(a=>a.kind==='player'&&a.pos===p).sort((a,b)=>a[wwKey]-b[wwKey]);worst[p]=mine[0]}
+ const fa=all.filter(a=>a.owner==null&&a[wwKey]>=150&&!(a.team==='FA'&&(a.age||0)>=31)&&(wwPos==='ALL'||a.pos===wwPos)).sort((x,y)=>y[wwKey]-x[wwKey]).slice(0,20);
+ const watch=getWatch().map(id=>S.assets[id]).filter(Boolean);
+ box.innerHTML=`<div class="sec-h"><div><h2>Market</h2><p class="mute small">30 day moves come from FantasyCalc trend data. Star anyone to add them to your watchlist; the finder can target it.</p></div></div>
+ <div class="grid2" style="margin-bottom:16px">
+  <div class="card"><h3 style="font-size:22px">Buy low targets</h3><p class="small mute" style="margin:2px 0 4px">Young players whose value dropped 8% or more in 30 days, on other rosters or free.</p>${buy.map(a=>mRow(a)).join('')||'<p class="small mute">No big young fallers right now.</p>'}</div>
+  <div class="card"><h3 style="font-size:22px">Sell high on your roster</h3><p class="small mute" style="margin:2px 0 4px">Your players who rose 8% or more, plus aging players still holding value.</p>${sell.map(a=>mRow(a,isOld(a)?'age curve risk':'')).join('')||'<p class="small mute">Nothing stands out to sell right now.</p>'}</div>
+ </div>
+ <div class="grid2">
+  <div class="card"><div class="row" style="justify-content:space-between"><h3 style="font-size:22px">Waiver wire</h3><div class="seg" id="wwKey"><button data-k="v" class="${wwKey==='v'?'on':''}">Dynasty</button><button data-k="rv" class="${wwKey==='rv'?'on':''}">Win now</button></div></div>
+   <div class="seg" id="wwPos" style="margin:8px 0 4px">${['ALL',...POS].map(p=>`<button data-p="${p}" class="${wwPos===p?'on':''}">${p==='ALL'?'All':p}</button>`).join('')}</div>
+   ${fa.map(a=>{const w=worst[a.pos];const d=w?a[wwKey]-w[wwKey]:a[wwKey];return mRow(a,w?(d>0?`<span class="gain">+${fmt(d)} over ${esc(w.name)}</span>`:`below ${esc(w.name)}`):'')}).join('')||'<p class="small mute">No valued free agents at this position.</p>'}</div>
+  <div class="card"><h3 style="font-size:22px">Watchlist</h3><p class="small mute" style="margin:2px 0 4px">Trade for opens Get this player for that target.</p>${watch.map(a=>mRow(a)).join('')||'<p class="small mute">Star players anywhere in the Market to track them here.</p>'}</div>
+ </div>`;
+ $('#wwKey').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b){wwKey=b.dataset.k;renderMarket()}});
+ $('#wwPos').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(b){wwPos=b.dataset.p;renderMarket()}})}
+
+/* ---------- ROOKIE DRAFT ---------- */
+function renderRookies(){
+ const box=$('#rookieBody');if(!S.lg){box.innerHTML='<div class="card empty"><h3>No league loaded</h3></div>';return}
+ const season=S.pickSeasons[0],n=S.teams.length;const picks=Object.values(S.assets).filter(a=>a.kind==='pick'&&a.id.startsWith('P:')&&a.season===season);
+ picks.forEach(a=>{a._slot=a.slot||S.byRid[a.orig]?.projSlot||n});picks.sort((a,b)=>a.round-b.round||a._slot-b._slot);
+ const exact=picks.some(a=>a.exact);const rounds=[...new Set(picks.map(a=>a.round))];
+ const tally=S.teams.map(t=>{const mine=picks.filter(a=>a.owner===t.rid);return{t,n:mine.length,v:mine.reduce((s,a)=>s+a.v,0),first:mine.filter(a=>a.round===1).length}}).sort((a,b)=>b.v-a.v);const mx=Math.max(...tally.map(x=>x.v),1);
+ box.innerHTML=`<div class="sec-h"><div><h2>${season} rookie draft</h2><p class="mute small">${exact?'Draft order is set in Sleeper.':'Order is projected from current standings and roster strength, worst team picks first. It locks once Sleeper sets the draft order.'} Rookie rankings will show here once the value sources add the ${season} class, usually by spring.</p></div></div>
+ <div class="grid2" style="align-items:start">
+  <div class="card">${rounds.map(r=>`<h3 style="font-size:20px;margin:${r===1?0:14}px 0 6px">Round ${r}</h3>${picks.filter(a=>a.round===r).map(a=>{const own=S.byRid[a.owner],orig=S.byRid[a.orig];return `<div class="mrow" ${a.owner===S.myRid?'style="background:rgba(0,212,180,.07)"':''}><b class="disp" style="font-size:20px;width:48px">${r}.${String(a._slot).padStart(2,'0')}</b><div class="nm"><b>${esc(own?.mgr||'')}</b><small>${a.owner!==a.orig?'via '+esc(orig?.mgr||''):'own pick'}${a.tier?' · '+a.tier:''}</small></div><b class="num">${fmt(a.v)}</b>${a.owner!==S.myRid?`<button class="btn sm" data-tradefor="${esc(a.id)}">Trade for</button>`:''}</div>`}).join('')}`).join('')}</div>
+  <div class="card"><h3 style="font-size:22px;margin-bottom:8px">Draft capital by manager</h3>${tally.map(x=>`<div class="mrow"><div class="nm"><b>${esc(x.t.mgr)}</b><small>${x.n} picks · ${x.first} first${x.first===1?'':'s'}</small><div class="bar2" style="margin-top:4px"><i style="width:${x.v/mx*100}%;background:${x.t.rid===S.myRid?'var(--mint)':'var(--violet)'}"></i></div></div><b class="num">${fmt(x.v)}</b></div>`).join('')}</div>
+ </div>`}
 
 /* ---------- SETTINGS ---------- */
 $('#sApply').addEventListener('click',async()=>{
@@ -817,10 +974,10 @@ $('#sApply').addEventListener('click',async()=>{
  S.consol=$('#sConsol').checked;S.w={ra:+$('#wRa').value,fc:+$('#wFc').value,dp:+$('#wDp').value};S.smash=+$('#sSmash').value/100;S.floor=+$('#sFloor').value/100;
  if(!S.w.ra&&!S.w.fc&&!S.w.dp)S.w={ra:50,fc:35,dp:15};
  store.set('consol',S.consol);store.set('weights',S.w);store.set('smash',S.smash*100);store.set('floor',S.floor*100);if(S.lg)store.set('fmt:'+S.lg.league_id,S.f);
- try{await loadSources();if(S.lg){buildModel();if(S.hist){valueHistory();applyHabits()}}else S.assets={};renderAll();toast('Re-priced')}catch(e){toast(e.message)}});
+ try{await loadSources();if(S.lg){buildModel();if(S.hist){valueHistory();applyHabits()}S.odds=simOdds()}else S.assets={};renderAll();toast('Re-priced')}catch(e){toast(e.message)}});
 
 /* ---------- routing + boot ---------- */
-function route(){const v=(location.hash||'#league').slice(1);const ok=['league','calc','finder','log','setup'].includes(v)?v:'league';
+function route(){const v=(location.hash||'#league').slice(1);const ok=['league','calc','finder','market','rookies','log','setup'].includes(v)?v:'league';
  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+ok));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===ok))}
 addEventListener('hashchange',route);route();
 (async()=>{renderChips();renderCalcTeams();renderCalc();renderFinderSetup();renderLog();
