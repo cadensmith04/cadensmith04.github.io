@@ -194,6 +194,7 @@ footer a{color:#c4cde0}
     <label>You send up to<select id="fGive"><option value="1">1 asset</option><option value="2" selected>2 assets</option><option value="3">3 assets</option></select></label>
     <label class="scanOnly">You get up to<select id="fGet"><option value="1">1 asset</option><option value="2" selected>2 assets</option></select></label>
     <label class="scanOnly">Your gain, at least <span id="fEdgeV">4%</span><input type="range" id="fEdge" min="0" max="25" value="4"></label>
+    <label class="targetOnly" hidden>Max overpay <span id="fOverV">10%</span><input type="range" id="fOver" min="0" max="30" value="10"></label>
     <label>Acceptance odds, at least <span id="fAccV">30%</span><input type="range" id="fAcc" min="10" max="70" step="5" value="30"></label>
     <label class="scanOnly">Rank by<select id="fSort"><option value="ev">Best overall</option><option value="edge">Biggest edge</option><option value="odds">Most likely accepted</option></select></label>
     <label>Your window<select id="fWindow"><option value="auto">Auto detect</option><option value="contend">Contending</option><option value="middle">Middle</option><option value="rebuild">Rebuilding</option></select></label>
@@ -697,14 +698,17 @@ function renderIntel(give,get){
 
 /* ---------- FINDER ---------- */
 let focus='ANY',mode='scan',target=null;
-function setMode(m){mode=m;$$('#fMode button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));$('#targetBox').hidden=m!=='target';$('#focusBox').hidden=m==='target';$$('.scanOnly').forEach(x=>x.hidden=m==='target')}
-$('#fMode').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)});
-$('#fFocus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;focus=b.dataset.p;$$('#fFocus button').forEach(x=>x.classList.toggle('on',x===b))});
+function setMode(m){mode=m;$$('#fMode button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));$('#targetBox').hidden=m!=='target';$('#focusBox').hidden=m==='target';$$('.scanOnly').forEach(x=>x.hidden=m==='target');$$('.targetOnly').forEach(x=>x.hidden=m!=='target')}
+$('#fMode').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setMode(b.dataset.m);S.lastResults=null}});
+$('#fFocus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;focus=b.dataset.p;$$('#fFocus button').forEach(x=>x.classList.toggle('on',x===b));rerun()});
 $('#fEdge').addEventListener('input',e=>$('#fEdgeV').textContent=e.target.value+'%');
 $('#fAcc').addEventListener('input',e=>$('#fAccV').textContent=e.target.value+'%');
+$('#fOver').addEventListener('input',e=>$('#fOverV').textContent=e.target.value+'%');
+let rerunT=null;const rerun=()=>{if(!S.lastResults)return;clearTimeout(rerunT);rerunT=setTimeout(()=>runFinder(),450)};
+for(const id of['fGive','fGet','fEdge','fAcc','fOver','fSort','fPartner','fWindow','fPicks','fRoster'])$('#'+id).addEventListener('change',rerun);
 $('#fWindow').addEventListener('change',e=>{if(S.lg)store.set('win:'+S.lg.league_id,e.target.value);applyMyWindow();renderLeague()});
 $('#runFinder').addEventListener('click',()=>runFinder());
-picker($('#targetPick'),$('#ddT'),()=>S.teams.filter(t=>t.rid!==S.myRid).flatMap(t=>t.assets).filter(a=>a.v>0),a=>{target=a;renderTarget()});
+picker($('#targetPick'),$('#ddT'),()=>S.teams.filter(t=>t.rid!==S.myRid).flatMap(t=>t.assets).filter(a=>a.v>0),a=>{target=a;renderTarget();runFinder()});
 function renderTarget(){$('#targetSel').innerHTML=target?`<div class="asset" style="max-width:520px">${headshot(target)}<div class="nm">${esc(target.name)} ${posTag(target.pos)}<small>Owned by ${esc(S.byRid[target.owner]?.mgr||'')} · value ${fmt(target.v)}</small></div><button class="x" id="clearTarget" aria-label="Clear">×</button></div>`:'';
  $('#clearTarget')?.addEventListener('click',()=>{target=null;renderTarget()})}
 const lockKey=()=>'locks:'+(S.lg?.league_id||'')+':'+S.myRid;
@@ -727,15 +731,17 @@ let running=false;
 async function runFinder(){
  if(!S.lg||running)return;if(mode==='target'&&!target){toast('Pick a target player first');return}
  running=true;const btn=$('#runFinder');btn.disabled=true;btn.innerHTML='<span class="loading"></span> Scanning';
+ try{
  const me=S.byRid[S.myRid],locks=new Set(store.get(lockKey(),[]));
  const maxGive=+$('#fGive').value,maxGet=+$('#fGet').value,minEdge=+$('#fEdge').value/100,minP=+$('#fAcc').value/100,usePicks=$('#fPicks').checked,roster=$('#fRoster').checked;
  const partner=$('#fPartner').value,sortMode=$('#fSort').value,watch=new Set(getWatch());
  const opps=mode==='target'?[S.byRid[target.owner]]:S.teams.filter(t=>t.rid!==me.rid&&(partner==='all'||t.rid===+partner));
- const mySets=sets(pool(me,{locks,picks:usePicks}),mode==='target'?3:maxGive).map(s=>({s,m:mkt(s)}));
+ const maxOver=+$('#fOver').value/100;
+ const mySets=sets(pool(me,{locks,picks:usePicks}),maxGive).map(s=>({s,m:mkt(s)}));
  const prog=$('#fProg');prog.style.display='block';const bar=prog.firstElementChild;const out=[];let checked=0;
  for(let oi=0;oi<opps.length;oi++){const o=opps[oi];
   let theirSets;
-  if(mode==='target'){const extra=pool(o,{locks:new Set([target.id]),picks:usePicks,n:10});theirSets=[[target],...extra.map(x=>[target,x])]}
+  if(mode==='target'){const extra=pool(o,{locks:new Set([target.id]),picks:usePicks,n:10});theirSets=[[target],...(maxGet>=2?extra.map(x=>[target,x]):[])]}
   else theirSets=sets(pool(o,{locks:new Set(),picks:usePicks}),maxGet).filter(s=>focus==='ANY'||focus==='SMASH'||(focus==='WATCH'?s.some(a=>watch.has(a.id)):s.some(a=>a.pos===focus)));
   theirSets=theirSets.map(s=>({s,m:mkt(s)}));
   for(const G of mySets)for(const T of theirSets){
@@ -745,10 +751,11 @@ async function runFinder(){
    checked++;const base=Math.max(hi,1500);
    const em=evalTeam(me,G.s,T.s),myU=em.u/base;
    if(mode==='scan'&&(myU<minEdge||(focus==='SMASH'&&edge<S.smash)))continue;
+   if(mode==='target'&&(-edge>maxOver||myU<-maxOver))continue;
    const eo=evalTeam(o,T.s,G.s),theirU=eo.u/base,nd=needTerm(o,eo.after),hb=habitFit(o,G.s,T.s);
    if(-edge<-S.floor)continue;
    const P=accept(o,-edge,theirU,nd.s,hb);if(P<minP)continue;
-   const score=mode==='target'?P*.6-Math.max(0,-edge)*1.5+myU*.3:sortMode==='edge'?edge+myU*.5:sortMode==='odds'?P+myU*.3:myU*Math.sqrt(P)+.15*Math.max(0,Math.min(edge,.3));
+   const score=mode==='target'?myU+.12*P:sortMode==='edge'?edge+myU*.5:sortMode==='odds'?P+myU*.3:myU*Math.sqrt(P)+.15*Math.max(0,Math.min(edge,.3));
    out.push({o,give:G.s,get:T.s,edge,myU,theirU,P,em,eo,nd,hb,score:score+(T.s.some(a=>watch.has(a.id))?.08:0)})}
   bar.style.width=((oi+1)/opps.length*100)+'%';await tick()}
  out.sort((a,b)=>b.score-a.score);
@@ -760,10 +767,10 @@ async function runFinder(){
   else if((perGive[gh]||0)>=3)continue;
   seen.add(sig);perOpp[r.o.rid]=(perOpp[r.o.rid]||0)+1;perHead[head]=1;perGive[gh]=(perGive[gh]||0)+1;perGet[th]=(perGet[th]||0)+1;final.push(r);if(final.length>=(mode==='target'?15:45))break}
  S.lastResults=final;
- $('#fStatus').textContent=mode==='target'?`Priced ${checked.toLocaleString()} packages for ${target.name}. Cheapest realistic offers first.`:`Checked ${checked.toLocaleString()} realistic packages across ${opps.length} manager${opps.length>1?'s':''}. Showing the best ${final.length}.`;
- renderResults(final);prog.style.display='none';bar.style.width=0;btn.disabled=false;btn.textContent='Find trades';running=false}
+ $('#fStatus').textContent=mode==='target'?`Priced ${checked.toLocaleString()} packages for ${target.name}. Best for your team first, among offers they'd likely take, overpaying ${Math.round(maxOver*100)}% at most.`:`Checked ${checked.toLocaleString()} realistic packages across ${opps.length} manager${opps.length>1?'s':''}. Showing the best ${final.length}.`;
+ renderResults(final)}catch(err){console.error(err);toast('Finder error: '+err.message)}finally{const prog=$('#fProg');prog.style.display='none';prog.firstElementChild.style.width=0;btn.disabled=false;btn.textContent='Find trades';running=false}}
 
-function classify(r){if(r.edge>=S.smash)return['Smash','smash'];if(mode==='target')return[r.edge>=0?'Value':'Pay up',''];
+function classify(r){if(r.edge>=S.smash)return['Smash','smash'];if(mode==='target')return[r.edge>=0?`You win ${Math.round(r.edge*100)}%`:`You pay ${Math.round(-r.edge*100)}%`,''];
  if(Math.abs(r.edge)<.06&&r.theirU>0&&r.myU>0)return['Win win',''];if(r.give.length>r.get.length)return['Consolidate',''];return['Value','']}
 function why(r){const me=S.byRid[S.myRid],o=r.o,parts=[];
  const up=POS.filter(p=>r.nd.moves[p][1]<r.nd.moves[p][0]-1).sort((a,b)=>(r.nd.moves[b][0]-r.nd.moves[b][1])-(r.nd.moves[a][0]-r.nd.moves[a][1]));
@@ -778,11 +785,11 @@ function why(r){const me=S.byRid[S.myRid],o=r.o,parts=[];
  return parts.length?parts.join('; ').replace(/^./,c=>c.toUpperCase())+'.':'Fair on paper and both sides end up a better fit for their window.'}
 const miniRow=a=>`<div class="mini">${posTag(a.pos)}<span class="n">${esc(a.name)}${a.kind==='player'&&a.age?` <small>${Math.round(a.age)}</small>`:''}</span><b class="num">${fmt(a.v)}</b></div>`;
 function renderResults(list){
- if(!list.length){$('#fResults').innerHTML='<div class="card empty" style="grid-column:1/-1"><h3>Nothing cleared the bar</h3><p>Lower the gain or acceptance sliders, allow more assets per side, or unlock a player.</p></div>';return}
+ if(!list.length){$('#fResults').innerHTML=mode==='target'&&target?`<div class="card empty" style="grid-column:1/-1"><h3>No realistic way to land ${esc(target.name)} with these limits</h3><p>Let yourself send more assets, raise Max overpay, lower the acceptance odds, or unlock a player.</p></div>`:'<div class="card empty" style="grid-column:1/-1"><h3>Nothing cleared the bar</h3><p>Lower the gain or acceptance sliders, allow more assets per side, or unlock a player.</p></div>';return}
  $('#fResults').innerHTML=list.map((r,i)=>{const[tag,cls]=classify(r);return `<article class="deal ${cls}">
   <div class="deal-h"><span class="tag ${cls}">${tag}</span><div class="tm" style="gap:8px">${avatar(r.o)}${who(r.o)}<span class="badge w-${r.o.window}">${winLabel(r.o.window)}</span></div></div>
   <div class="swap"><div><h4>You send</h4>${r.give.map(miniRow).join('')}</div><div><h4>You get</h4>${r.get.map(miniRow).join('')}</div></div>
-  <div class="stats"><div><b class="${r.edge>=0?'gain':'loss'}">${pct(r.edge)}</b><small>Market edge</small></div><div><b class="${r.em.dWin>=0?'gain':'loss'}">${sgn(r.em.dWin)}</b><small>Your lineup</small></div><div><b class="${r.eo.dWin>=0?'gain':'loss'}">${sgn(r.eo.dWin)}</b><small>Their lineup</small></div><div><b>${Math.round(r.P*100)}%</b><small>Accept odds</small></div></div>
+  <div class="stats"><div><b class="${r.edge>=0?'gain':'loss'}">${pct(r.edge)}</b><small>Market edge</small></div><div><b class="${r.em.dWin>=0?'gain':'loss'}">${sgn(r.em.dWin)}</b><small>Your lineup</small></div>${mode==='target'?`<div><b class="${r.myU>=0?'gain':'loss'}">${pct(r.myU)}</b><small>Net for you</small></div>`:`<div><b class="${r.eo.dWin>=0?'gain':'loss'}">${sgn(r.eo.dWin)}</b><small>Their lineup</small></div>`}<div><b>${Math.round(r.P*100)}%</b><small>Accept odds</small></div></div>
   <p class="why">${esc(why(r))}</p>
   <div class="row"><button class="btn mint sm" data-prop="${i}">Send</button><button class="btn sm" data-load="${i}">Open in calculator</button></div></article>`}).join('')}
 $('#fResults').addEventListener('click',e=>{const p=e.target.closest('[data-prop]'),l=e.target.closest('[data-load]');
