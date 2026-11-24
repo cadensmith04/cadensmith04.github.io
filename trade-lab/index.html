@@ -518,7 +518,9 @@ function habitFit(t,getForThem,giveFromThem){const h=t.habits;if(!h||!h.conf)ret
 
 /* ---------- valuation ---------- */
 const P_NORM=1.25;
-function mkt(set){if(!set.length)return 0;if(!S.consol)return set.reduce((s,a)=>s+(a.v||0),0);return set.reduce((s,a)=>s+Math.max(a.v||0,0)**P_NORM,0)**(1/P_NORM)}
+// consolidation premium scales with the best asset: full 1.25 power at 4,000+, close to a raw sum for bench pieces
+function mkt(set,ref){if(!set.length)return 0;if(!S.consol)return set.reduce((s,a)=>s+(a.v||0),0);const top=ref??Math.max(...set.map(a=>a.v||0));const p=1+(P_NORM-1)*Math.min(1,top/4000);return set.reduce((s,a)=>s+Math.max(a.v||0,0)**p,0)**(1/p)}
+function edgeOf(give,get){const top=Math.max(0,...give.map(a=>a.v||0),...get.map(a=>a.v||0));const g=mkt(give,top),t=mkt(get,top);return{g,t,p:(t-g)/Math.max(g,t,1)}}
 const WTS={contend:{win:.65,dyn:.35},middle:{win:.4,dyn:.6},rebuild:{win:.12,dyn:.88}};
 function ageAdj(a,win){if(win!=='rebuild'&&win!=='contend')return 0;
  if(a.kind==='pick')return win==='rebuild'?.08*a.v:-.06*a.v;
@@ -667,7 +669,7 @@ function renderCalc(){
  const give=S.calc.give.map(id=>S.assets[id]).filter(Boolean),get=S.calc.get.map(id=>S.assets[id]).filter(Boolean);
  $('#listA').innerHTML=give.map(a=>assetRow(a,'a')).join('');$('#listB').innerHTML=get.map(a=>assetRow(a,'b')).join('');
  const rg=give.reduce((s,a)=>s+a.v,0),rt=get.reduce((s,a)=>s+a.v,0);$('#totA').textContent=fmt(rg);$('#totB').textContent=fmt(rt);
- const mg=mkt(give),mt=mkt(get),p=(mt-mg)/Math.max(mg,mt,1);
+ const E=edgeOf(give,get),mg=E.g,mt=E.t,p=E.p;
  if(!give.length&&!get.length){$('#verdict').innerHTML=`<div class="disp" style="font-size:26px">Build a trade</div><p class="small mute">Add assets to both sides. With a league loaded, each side is locked to what that manager actually owns.</p><div class="scale"><i style="width:50%"></i><i style="width:50%"></i></div>`;$('#intel').hidden=true;return}
  const g=grade(p),diff=mt-mg;
  $('#verdict').innerHTML=`<div class="small mute">Your grade</div><div class="grade" style="color:${gradeColor(g)}">${g}</div><div class="disp" style="font-size:24px">${Math.abs(p)<.02?'Dead even':p>0?`You win by ${fmt(diff)}`:`You overpay by ${fmt(-diff)}`}</div>
@@ -745,7 +747,7 @@ async function runFinder(){
   else theirSets=sets(pool(o,{locks:new Set(),picks:usePicks}),maxGet).filter(s=>focus==='ANY'||focus==='SMASH'||(focus==='WATCH'?s.some(a=>watch.has(a.id)):s.some(a=>a.pos===focus)));
   theirSets=theirSets.map(s=>({s,m:mkt(s)}));
   for(const G of mySets)for(const T of theirSets){
-   const hi=Math.max(G.m,T.m),edge=(T.m-G.m)/hi;
+   const E=edgeOf(G.s,T.s),hi=Math.max(E.g,E.t,1),edge=E.p;
    if(-edge>.45||edge>S.floor+.02)continue;
    if(roster){const d=G.s.filter(a=>a.kind==='player').length-T.s.filter(a=>a.kind==='player').length;if(Math.abs(d)>1)continue}
    checked++;const base=Math.max(hi,1500);
@@ -814,6 +816,8 @@ async function sendTrade(o,give,get){const{adds,drops,picks}=tradeVars(o,give,ge
  const d=await sgql('propose_trade',`mutation propose_trade($k_adds: [String], $v_adds: [Int], $k_drops: [String], $v_drops: [Int]) { propose_trade(league_id: ${Q(S.lg.league_id)},draft_picks: ${Q(picks)},k_adds: $k_adds,v_adds: $v_adds,k_drops: $k_drops,v_drops: $v_drops,waiver_budget: []){ transaction_id status leg } }`,
   {k_adds:adds.map(x=>x[0]),v_adds:adds.map(x=>x[1]),k_drops:drops.map(x=>x[0]),v_drops:drops.map(x=>x[1])});return d.propose_trade}
 async function rejectTrade(tx,leg){const d=await sgql('reject_trade',`mutation reject_trade { reject_trade(league_id: ${Q(S.lg.league_id)},transaction_id: ${Q(String(tx))},leg: ${parseInt(leg,10)||1}){ transaction_id status } }`);return d.reject_trade}
+async function acceptTrade(tx,leg){const d=await sgql('accept_trade',`mutation accept_trade { accept_trade(league_id: ${Q(S.lg.league_id)},transaction_id: ${Q(String(tx))},leg: ${parseInt(leg,10)||1}){ transaction_id status } }`);return d.accept_trade}
+function rosterRoom(s){const r=S.rawRosters.find(x=>x.roster_id===S.myRid)||{};const ex=new Set([...(r.taxi||[]),...(r.reserve||[])]);const active=(r.players||[]).filter(p=>!ex.has(p)).length;const max=(S.lg.roster_positions||[]).length;const net=s.get.filter(a=>a.kind==='player').length-s.give.filter(a=>a.kind==='player').length;return{over:active+net-max,net}}
 async function listTrades(){const d=await sgql('league_transactions_filtered',`query league_transactions_filtered { league_transactions_filtered(league_id: ${Q(S.lg.league_id)},roster_id_filters: [${parseInt(S.myRid,10)}],type_filters: ["trade"],leg_filters: [],status_filters: []){ adds consenter_ids created creator draft_picks drops league_id leg metadata roster_ids settings status status_updated transaction_id type player_map waiver_budget } }`);return d.league_transactions_filtered||[]}
 function openConnect(){
  modal(`<div class="row" style="justify-content:space-between"><h2>Connect Sleeper</h2><button class="x" data-close aria-label="Close">×</button></div>
@@ -864,17 +868,21 @@ function renderMine(){const box=$('#mineBody');if(!box)return;
  if(!mine){box.innerHTML='';return}
  const pending=mine.filter(t=>['proposed','pending'].includes(t.status)).sort((a,b)=>b.created-a.created);
  const recent=mine.filter(t=>!['proposed','pending'].includes(t.status)).sort((a,b)=>(b.status_updated||b.created)-(a.status_updated||a.created)).slice(0,12);
- const card=(tx,live)=>{const s=txSides(tx);const mg=mkt(s.give),mt=mkt(s.get),p=(mt-mg)/Math.max(mg,mt,1),g=grade(p);
+ const card=(tx,live)=>{const s=txSides(tx);const E=edgeOf(s.give,s.get),p=E.p,g=grade(p);const rg=s.give.reduce((a,x)=>a+x.v,0),rt=s.get.reduce((a,x)=>a+x.v,0),rp=(rt-rg)/Math.max(rg,rt,1);
   return `<article class="deal ${live&&!s.mine?'smash':''}" data-tx="${esc(tx.transaction_id)}"><div class="deal-h"><span class="tag ${live&&!s.mine?'smash':''}">${live?(s.mine?'Outgoing':'Incoming'):esc(tx.status==='complete'?'Accepted':tx.status==='rejected'?'Declined or withdrawn':tx.status)}</span><div class="tm" style="gap:8px">${avatar(s.other)}${who(s.other)}</div></div>
   <div class="swap"><div><h4>You send</h4>${s.give.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabOut?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabOut}</span></div>`:''}</div><div><h4>You get</h4>${s.get.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabIn?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabIn}</span></div>`:''}</div></div>
-  <div class="row" style="justify-content:space-between"><span class="small mute">${new Date(tx.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · grade for you <b style="color:${gradeColor(g)}">${g}</b> (${pct(p)})</span>
-  ${live?`<span class="row" style="gap:6px"><button class="btn sm" data-calcfrom="${esc(tx.transaction_id)}">Open in calculator</button>${s.mine?`<button class="btn sm" data-withdraw="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Withdraw</button>`:`<button class="btn sm" data-decline="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Decline</button>`}</span>`:''}</div></article>`};
- box.innerHTML=`<div class="sec-h"><div><h2>My trades</h2><p class="mute small">Live from Sleeper for ${esc(S.lg.name)}. Accepting an incoming offer still happens in Sleeper for now.</p></div><div class="row"><button class="btn sm" id="mineRefresh">Refresh</button><button class="btn sm" id="mineSettings">Sleeper connection</button></div></div>
+  <div class="row" style="justify-content:space-between"><span class="small mute">${new Date(tx.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · grade for you <b style="color:${gradeColor(g)}">${g}</b> (${pct(p)} adjusted, ${pct(rp)} raw)</span>
+  ${live?`<span class="row" style="gap:6px"><button class="btn sm" data-calcfrom="${esc(tx.transaction_id)}">Open in calculator</button>${s.mine?`<button class="btn sm" data-withdraw="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Withdraw</button>`:`<button class="btn sm" data-decline="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Decline</button><button class="btn sm mint" data-accept="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Accept</button>`}</span>`:''}</div>${live&&!s.mine&&rosterRoom(s).over>0?`<p class="small" style="color:var(--warn);margin:0">Accepting puts you ${rosterRoom(s).over} over your roster limit. Sleeper will make you drop ${rosterRoom(s).over>1?'players':'a player'}, so accept this one in Sleeper.</p>`:''}</article>`};
+ box.innerHTML=`<div class="sec-h"><div><h2>My trades</h2><p class="mute small">Live from Sleeper for ${esc(S.lg.name)}. Accept and Decline ask for a second tap.</p></div><div class="row"><button class="btn sm" id="mineRefresh">Refresh</button><button class="btn sm" id="mineSettings">Sleeper connection</button></div></div>
  <h3 style="font-size:24px;margin-bottom:10px">Pending (${pending.length})</h3>${pending.length?`<div class="results" style="margin-top:0">${pending.map(t=>card(t,true)).join('')}</div>`:'<div class="card empty" style="padding:24px"><p>No pending trades. Find one in the Smash finder.</p></div>'}
  ${recent.length?`<h3 style="font-size:24px;margin:22px 0 10px">Recent</h3><div class="results" style="margin-top:0">${recent.map(t=>card(t,false)).join('')}</div>`:''}`;
  $('#mineRefresh').addEventListener('click',loadMine);$('#mineSettings').addEventListener('click',openConnect)}
 document.addEventListener('click',async e=>{
- const w=e.target.closest('[data-withdraw]'),d=e.target.closest('[data-decline]'),c=e.target.closest('[data-calcfrom]');
+ const w=e.target.closest('[data-withdraw]'),d=e.target.closest('[data-decline]'),c=e.target.closest('[data-calcfrom]'),ac=e.target.closest('[data-accept]');
+ if(ac){if(!ac.dataset.sure){ac.dataset.sure='1';ac.textContent='Tap again to accept';setTimeout(()=>{if(ac.isConnected){delete ac.dataset.sure;ac.textContent='Accept'}},4000);return}
+  ac.disabled=true;ac.innerHTML='<span class="loading"></span>';
+  try{await acceptTrade(ac.dataset.accept,ac.dataset.leg);toast('Accepted');await loadMine();openLeague(S.lg.league_id)}
+  catch(er){ac.disabled=false;ac.textContent='Accept';const card=ac.closest('.deal');const m=document.createElement('p');m.className='small loss';m.style.margin='0';m.innerHTML=`Sleeper said: ${esc(er.message)}. Accept it in <a href="https://sleeper.com/leagues/${S.lg.league_id}/trades" target="_blank" rel="noopener">Sleeper</a> for now.`;card.appendChild(m)}return}
  if(c){const tx=mine.find(t=>String(t.transaction_id)===c.dataset.calcfrom);const s=txSides(tx);S.calc={a:S.myRid,b:s.other.rid,give:s.give.filter(a=>a.id).map(a=>a.id),get:s.get.filter(a=>a.id).map(a=>a.id)};renderCalcTeams();renderCalc();location.hash='#calc';return}
  const b=w||d;if(!b)return;
  if(d&&!b.dataset.sure){b.dataset.sure='1';b.textContent='Tap again to decline';b.classList.add('mint');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='Decline';b.classList.remove('mint')}},4000);return}
