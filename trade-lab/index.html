@@ -792,7 +792,7 @@ $('#fResults').addEventListener('click',e=>{const p=e.target.closest('[data-prop
 /* ---------- PROPOSE ---------- */
 /* ---------- SLEEPER CONNECTION (token pasted by the user, kept only in this browser) ---------- */
 S.tok=store.get('sleeperToken','');
-function tokUser(t){try{const p=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return String(p.user_id||p.sub||'')}catch{return''}}
+function tokUser(t){try{let b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');b+='='.repeat((4-b.length%4)%4);const raw=decodeURIComponent(escape(atob(b)));const m=raw.match(/"(?:user_id|sub)"\s*:\s*"?(\d+)"?/);return m?m[1]:''}catch{return''}}
 function renderSlp(){const b=$('#slpBtn');if(!b)return;b.textContent=S.tok?'Sleeper connected':'Connect Sleeper';b.classList.toggle('mint',!!S.tok)}
 async function sgql(op,query,variables){if(!S.tok)throw new Error('Connect Sleeper first');
  const r=await fetch('https://sleeper.com/graphql',{method:'POST',headers:{'Content-Type':'application/json',Authorization:S.tok,'X-Sleeper-GraphQL-Op':op},body:JSON.stringify({operationName:op,variables:variables||{},query})});
