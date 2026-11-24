@@ -153,6 +153,7 @@ footer a{color:#c4cde0}
     <button class="btn mint" id="goBtn">Load leagues</button>
     <select id="leagueSel" aria-label="League" hidden></select>
     <select id="meSel" aria-label="Viewing as" hidden></select>
+    <button type="button" class="btn" id="slpBtn">Connect Sleeper</button>
    </form>
   </div>
   <div class="fmt" id="fmtChips"></div>
@@ -162,6 +163,7 @@ footer a{color:#c4cde0}
    <a href="#finder" data-v="finder">Smash finder</a>
    <a href="#market" data-v="market">Market</a>
    <a href="#rookies" data-v="rookies">Rookie draft</a>
+   <a href="#mine" data-v="mine">My trades</a>
    <a href="#log" data-v="log">Trade log</a>
    <a href="#setup" data-v="setup">Settings</a>
   </nav>
@@ -207,6 +209,7 @@ footer a{color:#c4cde0}
 
  <section class="view" id="v-market"><div id="marketBody"></div></section>
  <section class="view" id="v-rookies"><div id="rookieBody"></div></section>
+ <section class="view" id="v-mine"><div id="mineBody"></div></section>
  <section class="view" id="v-log"><div id="logBody"></div></section>
 
  <section class="view" id="v-setup">
@@ -568,7 +571,7 @@ async function openLeague(lid){
   $('#logBody').innerHTML='<div class="card empty"><h3><span class="loading"></span> Loading every season of trades</h3><p>Following the league back through each season and pricing every deal at the time and today.</p></div>';
   await loadHistory(tok);if(tok===S.tok)renderAll()}catch(err){if(err.message==='stale')return;setStatus('');toast(err.message);console.error(err)}}
 
-function renderAll(){renderChips();renderLeague();renderCalcTeams();renderCalc();renderFinderSetup();renderMarket();renderRookies();renderLog()}
+function renderAll(){renderSlp();renderChips();renderLeague();renderCalcTeams();renderCalc();renderFinderSetup();renderMarket();renderRookies();renderLog()}
 
 /* ---------- LEAGUE ---------- */
 const winLabel=w=>({contend:'Contending',rebuild:'Rebuilding',middle:'Middle'}[w]);
@@ -671,7 +674,7 @@ function renderCalc(){
   <div class="scale"><i style="width:${mg/(mg+mt||1)*100}%"></i><i style="width:${mt/(mg+mt||1)*100}%"></i></div><div class="row small mute" style="justify-content:space-between"><span>Give ${fmt(mg)}</span><span>Get ${fmt(mt)}</span></div>
   <div class="kv"><span>Raw give</span><b class="num">${fmt(rg)}</b><span>Raw get</span><b class="num">${fmt(rt)}</b><span>${S.consol?'Adjusted edge':'Edge'}</span><b class="num ${p>=0?'gain':'loss'}">${pct(p)}</b></div>
   ${balanceHtml(give,get,mg,mt)}
-  <div class="row" style="justify-content:center;margin-top:14px">${S.lg&&S.calc.a!=='any'&&S.calc.b!=='any'&&give.length&&get.length?`<button class="btn mint" id="proposeCalc">Propose in Sleeper</button>`:''}</div>`;
+  <div class="row" style="justify-content:center;margin-top:14px">${S.lg&&S.calc.a!=='any'&&S.calc.b!=='any'&&give.length&&get.length?`<button class="btn mint" id="proposeCalc">Send in Sleeper</button>`:''}</div>`;
  $('#proposeCalc')?.addEventListener('click',()=>propose(S.byRid[S.calc.b],give,get));
  renderIntel(give,get)}
 function balanceHtml(give,get,mg,mt){if(Math.abs(mt-mg)<Math.max(mg,mt)*.03)return'';
@@ -781,35 +784,95 @@ function renderResults(list){
   <div class="swap"><div><h4>You send</h4>${r.give.map(miniRow).join('')}</div><div><h4>You get</h4>${r.get.map(miniRow).join('')}</div></div>
   <div class="stats"><div><b class="${r.edge>=0?'gain':'loss'}">${pct(r.edge)}</b><small>Market edge</small></div><div><b class="${r.em.dWin>=0?'gain':'loss'}">${sgn(r.em.dWin)}</b><small>Your lineup</small></div><div><b class="${r.eo.dWin>=0?'gain':'loss'}">${sgn(r.eo.dWin)}</b><small>Their lineup</small></div><div><b>${Math.round(r.P*100)}%</b><small>Accept odds</small></div></div>
   <p class="why">${esc(why(r))}</p>
-  <div class="row"><button class="btn mint sm" data-prop="${i}">Propose in Sleeper</button><button class="btn sm" data-load="${i}">Open in calculator</button></div></article>`}).join('')}
+  <div class="row"><button class="btn mint sm" data-prop="${i}">Send</button><button class="btn sm" data-load="${i}">Open in calculator</button></div></article>`}).join('')}
 $('#fResults').addEventListener('click',e=>{const p=e.target.closest('[data-prop]'),l=e.target.closest('[data-load]');
  if(p){const r=S.lastResults[+p.dataset.prop];propose(r.o,r.give,r.get)}
  if(l){const r=S.lastResults[+l.dataset.load];S.calc={a:S.myRid,b:r.o.rid,give:r.give.map(a=>a.id),get:r.get.map(a=>a.id)};renderCalcTeams();renderCalc();location.hash='#calc'}});
 
 /* ---------- PROPOSE ---------- */
-const BOOKMARK="javascript:(()=%3E%7Bconst%20e=e=%3EString(e??%22%22).replace(/%5B&%3C%3E%22'%5D/g,(e=%3E(%7B%22&%22:%22&amp;%22,%22%3C%22:%22&lt;%22,%22%3E%22:%22&gt;%22,'%22':%22&quot;%22,%22'%22:%22&%2339;%22%7D%5Be%5D)));if(!/(%5E%7C%5C.)sleeper%5C.com%24/.test(location.hostname))return%20void%20alert(%22Use%20this%20bookmark%20on%20sleeper.com%20after%20tapping%20Send%20in%20Trade%20Lab.%22);const%20t=e=%3E%7Bconst%20t=String(e%7C%7C%22%22).match(/(?:tradelab=%7CTL1:)(%5BA-Za-z0-9_-%5D%7B20,%7D)/);return%20t?t%5B1%5D:null%7D,o=e=%3E%7Blet%20t;try%7Bt=JSON.parse(decodeURIComponent(escape(atob(e.replace(/-/g,%22+%22).replace(/_/g,%22/%22)))))%7Dcatch(e)%7Breturn%20null%7Dreturn%20t&&/%5E%5Cd+%24/.test(t.lid)&&Array.isArray(t.adds)&&Array.isArray(t.drops)&&t.adds.concat(t.drops).every((e=%3E/%5E%5BA-Za-z0-9%5D+%24/.test(e%5B0%5D)&&Number.isInteger(e%5B1%5D)))&&(t.picks%7C%7C%5B%5D).every((e=%3E/%5E%5Cd+,%5Cd%7B4%7D,%5Cd+,%5Cd+,%5Cd+%24/.test(e)))&&(t.faab%7C%7C%5B%5D).every((e=%3E/%5E%5Cd+,%5Cd+,%5Cd+%24/.test(e)))?t:null%7D,n=(localStorage.getItem(%22token%22)%7C%7C%22%22).replace(/%5E%22%7C%22%24/g,%22%22);if(!n)return%20void%20alert(%22Sign%20in%20to%20Sleeper%20in%20this%20browser%20first.%22);const%20r=(e,t,o)=%3Efetch(%22/graphql%22,%7Bmethod:%22POST%22,headers:%7B%22Content-Type%22:%22application/json%22,Authorization:n,%22X-Sleeper-GraphQL-Op%22:e%7D,body:JSON.stringify(%7BoperationName:e,variables:o%7C%7C%7B%7D,query:t%7D)%7D).then((e=%3Ee.json())),a=document.getElementById(%22tl-send%22);a&&a.remove();const%20d=document.createElement(%22div%22);d.id=%22tl-send%22,d.style.cssText=%22position:fixed;inset:0;z-index:2147483647;background:rgba(3,6,12,.72);display:flex;align-items:center;justify-content:center;font:15px/1.45%20-apple-system,BlinkMacSystemFont,sans-serif%22;const%20i=%22border:0;border-radius:10px;padding:10px%2016px;font-weight:700;font-size:15px;cursor:pointer;margin-right:8px%22,s=e=%3E%7Bd.innerHTML=%60%3Cdiv%20style=%22background:%23171f2d;color:%23eaf0fa;border:1px%20solid%20%232a3448;border-radius:16px;padding:22px;max-width:440px;width:92%25%22%3E%3Cdiv%20style=%22color:%2300d4b4;font-weight:800;font-size:13px%22%3ETRADE%20LAB%3C/div%3E%24%7Be%7D%3C/div%3E%60%7D;document.body.appendChild(d);const%20l=e=%3E%7Bconst%20t=d.querySelector(%22%23tl-msg%22);t&&(t.innerHTML=e)%7D,c=()=%3E%7Bd.remove(),location.hash.includes(%22tradelab%22)&&history.replaceState(null,%22%22,location.pathname+location.search)%7D;let%20p=null;const%20g=()=%3E%7Bs(%60%3Cdiv%20style=%22font-size:21px;font-weight:800;margin:4px%200%2010px%22%3ESend%20this%20trade%20to%20%24%7Be(p.mgr)%7D?%3C/div%3E%5Cn%20%20%20%20%3Cdiv%20style=%22color:%238c98ae;font-size:13px%22%3EYou%20send%3C/div%3E%3Cdiv%20style=%22margin-bottom:8px%22%3E%24%7Be((p.give%7C%7C%5B%5D).join(%22,%20%22)%7C%7C%22Nothing%22)%7D%3C/div%3E%5Cn%20%20%20%20%3Cdiv%20style=%22color:%238c98ae;font-size:13px%22%3EYou%20get%3C/div%3E%3Cdiv%20style=%22margin-bottom:14px%22%3E%24%7Be((p.get%7C%7C%5B%5D).join(%22,%20%22)%7C%7C%22Nothing%22)%7D%3C/div%3E%5Cn%20%20%20%20%3Cdiv%20id=%22tl-msg%22%20style=%22color:%238c98ae;font-size:13px;min-height:20px;margin-bottom:12px%22%3E%3C/div%3E%5Cn%20%20%20%20%3Cdiv%20id=%22tl-btns%22%3E%3Cbutton%20id=%22tl-go%22%20style=%22%24%7Bi%7D;background:%2300d4b4;color:%23002b25%22%3ESend%20trade%3C/button%3E%3Cbutton%20id=%22tl-no%22%20style=%22%24%7Bi%7D;background:%232a3448;color:%23eaf0fa%22%3ECancel%3C/button%3E%3C/div%3E%60),d.querySelector(%22%23tl-no%22).onclick=c,d.querySelector(%22%23tl-go%22).onclick=u%7D,u=async()=%3E%7Bconst%20t=d.querySelector(%22%23tl-go%22);t.disabled=!0,t.textContent=%22Sending%E2%80%A6%22;const%20o=JSON.stringify,n=%60mutation%20propose_trade(%24k_adds:%20%5BString%5D,%20%24v_adds:%20%5BInt%5D,%20%24k_drops:%20%5BString%5D,%20%24v_drops:%20%5BInt%5D)%20%7B%5Cn%20%20%20%20%20%20propose_trade(league_id:%20%24%7Bo(p.lid)%7D,draft_picks:%20%24%7Bo(p.picks%7C%7C%5B%5D)%7D,k_adds:%20%24k_adds,v_adds:%20%24v_adds,k_drops:%20%24k_drops,v_drops:%20%24v_drops,waiver_budget:%20%24%7Bo(p.faab%7C%7C%5B%5D)%7D)%7B%20transaction_id%20status%20leg%20%7D%5Cn%20%20%20%20%7D%60;try%7Bconst%20a=await%20r(%22propose_trade%22,n,%7Bk_adds:p.adds.map((e=%3Ee%5B0%5D)),v_adds:p.adds.map((e=%3Ee%5B1%5D)),k_drops:p.drops.map((e=%3Ee%5B0%5D)),v_drops:p.drops.map((e=%3Ee%5B1%5D))%7D),s=a&&a.data&&a.data.propose_trade;if(!s%7C%7Ca.errors)return%20t.disabled=!1,t.textContent=%22Try%20again%22,void%20l(%60%3Cspan%20style=%22color:%23ff5d6e%22%3ESleeper%20said%20no:%20%24%7Be(a.errors&&a.errors%5B0%5D&&a.errors%5B0%5D.message%7C%7C%22unknown%20error%22)%7D%3C/span%3E%60);l(%60%3Cspan%20style=%22color:%232fd68e;font-weight:700%22%3ESent.%20It%20is%20in%20%24%7Be(p.mgr)%7D's%20trade%20inbox%20now.%3C/span%3E%60),d.querySelector(%22%23tl-btns%22).innerHTML=%60%3Cbutton%20id=%22tl-undo%22%20style=%22%24%7Bi%7D;background:%232a3448;color:%23eaf0fa%22%3EUndo%3C/button%3E%3Cbutton%20id=%22tl-done%22%20style=%22%24%7Bi%7D;background:%2300d4b4;color:%23002b25%22%3EDone%3C/button%3E%60,d.querySelector(%22%23tl-done%22).onclick=c,d.querySelector(%22%23tl-undo%22).onclick=async()=%3E%7Bconst%20t=await%20r(%22reject_trade%22,%60mutation%20reject_trade%20%7B%20reject_trade(league_id:%20%24%7Bo(p.lid)%7D,transaction_id:%20%24%7Bo(String(s.transaction_id))%7D,leg:%20%24%7BparseInt(s.leg,10)%7C%7C1%7D)%7B%20transaction_id%20status%20%7D%20%7D%60);t&&t.data&&t.data.reject_trade?(l('%3Cspan%20style=%22color:%23ffb648;font-weight:700%22%3EWithdrawn.%3C/span%3E'),d.querySelector(%22%23tl-btns%22).innerHTML=%60%3Cbutton%20id=%22tl-done2%22%20style=%22%24%7Bi%7D;background:%232a3448;color:%23eaf0fa%22%3EClose%3C/button%3E%60,d.querySelector(%22%23tl-done2%22).onclick=c):l(%60%3Cspan%20style=%22color:%23ff5d6e%22%3ECould%20not%20withdraw:%20%24%7Be(t&&t.errors&&t.errors%5B0%5D&&t.errors%5B0%5D.message%7C%7C%22unknown%20error%22)%7D.%20Withdraw%20it%20in%20Sleeper.%3C/span%3E%60)%7D%7Dcatch(o)%7Bt.disabled=!1,t.textContent=%22Try%20again%22,l(%60%3Cspan%20style=%22color:%23ff5d6e%22%3E%24%7Be(o.message)%7D%3C/span%3E%60)%7D%7D,b=t(location.hash)%7C%7Ct(location.search);p=b&&o(b),p?g():(()=%3E%7Bs(%60%3Cdiv%20style=%22font-size:21px;font-weight:800;margin:4px%200%208px%22%3EPaste%20your%20trade%3C/div%3E%5Cn%20%20%20%20%20%20%3Cdiv%20style=%22color:%238c98ae;font-size:13px;margin-bottom:10px%22%3ETapping%20Open%20in%20Sleeper%20in%20Trade%20Lab%20copied%20a%20trade%20code.%20Paste%20it%20here%20with%20Command%20+%20V.%3C/div%3E%5Cn%20%20%20%20%20%20%3Cinput%20id=%22tl-code%22%20placeholder=%22TL1:...%22%20style=%22width:100%25;box-sizing:border-box;padding:11px%2012px;border-radius:10px;border:1px%20solid%20%232a3448;background:%23121926;color:%23eaf0fa;font-size:16px;margin-bottom:10px%22%3E%5Cn%20%20%20%20%20%20%3Cdiv%20id=%22tl-msg%22%20style=%22color:%238c98ae;font-size:13px;min-height:20px;margin-bottom:12px%22%3E%3C/div%3E%5Cn%20%20%20%20%20%20%3Cdiv%3E%3Cbutton%20id=%22tl-next%22%20style=%22%24%7Bi%7D;background:%2300d4b4;color:%23002b25%22%3EContinue%3C/button%3E%3Cbutton%20id=%22tl-no%22%20style=%22%24%7Bi%7D;background:%232a3448;color:%23eaf0fa%22%3ECancel%3C/button%3E%3C/div%3E%60);const%20e=d.querySelector(%22%23tl-code%22),n=e=%3E%7Bconst%20n=t(e),r=n&&o(n);return!!r&&(p=r,g(),!0)%7D;e.addEventListener(%22input%22,(()=%3En(e.value))),d.querySelector(%22%23tl-next%22).onclick=()=%3E%7Bn(e.value)%7C%7Cl('%3Cspan%20style=%22color:%23ff5d6e%22%3EThat%20is%20not%20a%20Trade%20Lab%20code.%20Copy%20it%20again%20from%20Trade%20Lab.%3C/span%3E')%7D,d.querySelector(%22%23tl-no%22).onclick=c,e.focus(),navigator.clipboard&&navigator.clipboard.readText&&navigator.clipboard.readText().then((t=%3E%7Bp%7C%7C(e.value=t,n(t))%7D)).catch((()=%3E%7B%7D))%7D)()%7D)();";
-function tradePayload(o,give,get){const me=S.myRid,adds=[],drops=[],picks=[];
+/* ---------- SLEEPER CONNECTION (token pasted by the user, kept only in this browser) ---------- */
+S.tok=store.get('sleeperToken','');
+function tokUser(t){try{const p=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return String(p.user_id||p.sub||'')}catch{return''}}
+function renderSlp(){const b=$('#slpBtn');if(!b)return;b.textContent=S.tok?'Sleeper connected':'Connect Sleeper';b.classList.toggle('mint',!!S.tok)}
+async function sgql(op,query,variables){if(!S.tok)throw new Error('Connect Sleeper first');
+ const r=await fetch('https://sleeper.com/graphql',{method:'POST',headers:{'Content-Type':'application/json',Authorization:S.tok,'X-Sleeper-GraphQL-Op':op},body:JSON.stringify({operationName:op,variables:variables||{},query})});
+ if(r.status===401||r.status===403)throw new Error('Sleeper rejected the login. Reconnect with a fresh token.');
+ const j=await r.json();if(j.errors)throw new Error(j.errors[0].message||'Sleeper error');return j.data}
+const Q=JSON.stringify;
+function tradeVars(o,give,get){const me=S.myRid,adds=[],drops=[],picks=[];
  for(const a of give){if(a.kind==='player'){adds.push([a.sid,o.rid]);drops.push([a.sid,me])}else if(a.id.startsWith('P:'))picks.push(`${a.orig},${a.season},${a.round},${o.rid},${me}`)}
  for(const a of get){if(a.kind==='player'){adds.push([a.sid,me]);drops.push([a.sid,o.rid])}else if(a.id.startsWith('P:'))picks.push(`${a.orig},${a.season},${a.round},${me},${o.rid}`)}
- const t={v:1,lid:S.lg.league_id,mgr:o.mgr,give:give.map(a=>a.name),get:get.map(a=>a.name),adds,drops,picks,faab:[]};
- return btoa(unescape(encodeURIComponent(JSON.stringify(t)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
-function propose(o,give,get){const me=S.myRid,dl=deadlineInfo(),setUp=store.get('bmSetup2',false),code=tradePayload(o,give,get);
- const url=`https://sleeper.com/leagues/${S.lg.league_id}/trades?tradelab=${code}#tradelab=${code}`;
+ return{adds,drops,picks}}
+async function sendTrade(o,give,get){const{adds,drops,picks}=tradeVars(o,give,get);
+ const d=await sgql('propose_trade',`mutation propose_trade($k_adds: [String], $v_adds: [Int], $k_drops: [String], $v_drops: [Int]) { propose_trade(league_id: ${Q(S.lg.league_id)},draft_picks: ${Q(picks)},k_adds: $k_adds,v_adds: $v_adds,k_drops: $k_drops,v_drops: $v_drops,waiver_budget: []){ transaction_id status leg } }`,
+  {k_adds:adds.map(x=>x[0]),v_adds:adds.map(x=>x[1]),k_drops:drops.map(x=>x[0]),v_drops:drops.map(x=>x[1])});return d.propose_trade}
+async function rejectTrade(tx,leg){const d=await sgql('reject_trade',`mutation reject_trade { reject_trade(league_id: ${Q(S.lg.league_id)},transaction_id: ${Q(String(tx))},leg: ${parseInt(leg,10)||1}){ transaction_id status } }`);return d.reject_trade}
+async function listTrades(){const d=await sgql('league_transactions_filtered',`query league_transactions_filtered { league_transactions_filtered(league_id: ${Q(S.lg.league_id)},roster_id_filters: [${parseInt(S.myRid,10)}],type_filters: ["trade"],leg_filters: [],status_filters: []){ adds consenter_ids created creator draft_picks drops league_id leg metadata roster_ids settings status status_updated transaction_id type player_map waiver_budget } }`);return d.league_transactions_filtered||[]}
+function openConnect(){
+ modal(`<div class="row" style="justify-content:space-between"><h2>Connect Sleeper</h2><button class="x" data-close aria-label="Close">×</button></div>
+ <p class="small mute" style="margin:4px 0 0">Lets Trade Lab send, withdraw and list your trades. One time, about a minute.</p>
+ <ol class="steps"><li>In Safari, open <b>sleeper.com</b> and make sure you are signed in.</li><li>Press <b>Option + Command + I</b>, click <b>Storage</b>, expand <b>Local Storage</b>, click <b>sleeper.com</b>.</li><li>Find the row whose Key is <b>token</b>. Double click its Value, press <b>Command + A</b>, then <b>Command + C</b>.</li><li>Paste it below and click Connect.</li></ol>
+ <input id="tokIn" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Sleeper token" class="field" style="width:100%;margin-top:12px">
+ <p id="tokMsg" class="small" style="min-height:20px;margin:8px 0 0"></p>
+ <div class="row" style="margin-top:8px"><button class="btn mint" id="tokGo">Connect</button>${S.tok?'<button class="btn" id="tokOff">Disconnect</button>':''}</div>
+ <p class="small mute" style="margin-top:12px">Your token works like a password for Sleeper. It is saved only in this browser and sent only to sleeper.com. Disconnect here or change your Sleeper password to cancel it.</p>`);
+ $('#tokGo').addEventListener('click',async()=>{const v=$('#tokIn').value.trim().replace(/^"|"$/g,'');const m=$('#tokMsg');
+  if(!/^[\w-]+\.[\w-]+\.[\w-]+$/.test(v)){m.innerHTML='<span class="loss">That does not look like a Sleeper token. Copy the whole Value of the token row.</span>';return}
+  const uid=tokUser(v);if(S.user&&uid&&uid!==S.user.user_id){m.innerHTML=`<span class="loss">That token belongs to a different Sleeper account than ${esc(S.user.display_name||'the one loaded')}.</span>`;return}
+  const old=S.tok;S.tok=v;m.innerHTML='<span class="loading"></span> Checking with Sleeper…';
+  try{if(S.lg)await listTrades();store.set('sleeperToken',v);renderSlp();m.innerHTML='<span class="gain">Connected.</span>';setTimeout(()=>{closeModal();if(location.hash==='#mine')loadMine()},600)}
+  catch(e){S.tok=old;m.innerHTML=`<span class="loss">${esc(e.message)}</span>`}});
+ $('#tokOff')?.addEventListener('click',()=>{S.tok='';store.set('sleeperToken','');renderSlp();closeModal();toast('Disconnected');renderMine()})}
+$('#slpBtn').addEventListener('click',openConnect);
+
+function propose(o,give,get){const me=S.myRid,dl=deadlineInfo();const url=`https://sleeper.com/leagues/${S.lg.league_id}/trades`;
  const txt=`${S.byRid[me].mgr} sends ${give.map(a=>a.name).join(', ')}\n${o.mgr} sends ${get.map(a=>a.name).join(', ')}`;
  modal(`<div class="row" style="justify-content:space-between"><h2>Send to ${esc(o.mgr)}</h2><button class="x" data-close aria-label="Close">×</button></div>
  ${dl&&!dl.open?`<p class="small" style="color:var(--warn);margin:6px 0 0">${esc(dl.text)}. Sleeper will reject it until trades reopen.</p>`:''}
  <div class="swap" style="margin-top:12px"><div><h4 class="small mute">${esc(S.byRid[me].mgr)} sends</h4>${give.map(miniRow).join('')}</div><div><h4 class="small mute">${esc(o.mgr)} sends</h4>${get.map(miniRow).join('')}</div></div>
- <div class="row" style="margin-top:14px"><a class="btn mint" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(url)}" target="_blank" rel="noopener" id="sendLink">Open in Sleeper to send</a><button class="btn" id="copyPitch">Copy trade</button></div>
- <ol class="steps"><li>Tap <b>Open in Sleeper to send</b>. This also copies a trade code.</li><li>On Sleeper, click your <b>Send with Trade Lab</b> bookmark. If it asks, paste with Command + V.</li><li>Check the trade and click <b>Send trade</b>. An Undo button appears right after.</li></ol>
- <details ${setUp?'':'open'} style="margin-top:12px"><summary class="small" style="cursor:pointer;font-weight:700">${setUp?'Bookmark setup':'Set up the Send with Trade Lab bookmark (updated Nov 24: replace any older copy)'}</summary>
-  <ol class="steps"><li>In Safari, show the Favorites Bar: <b>View</b> menu, then <b>Show Favorites Bar</b> (Shift + Command + B).</li>
-  <li>Drag this button onto the Favorites Bar: <a class="btn sm" href="${esc(BOOKMARK)}" onclick="event.preventDefault()" style="text-decoration:none;display:inline-flex;align-items:center;cursor:grab">Send with Trade Lab</a></li>
-  <li>If dragging does not work: press Command + D to bookmark any page into Favorites, then <b>Bookmarks</b> menu, <b>Edit Bookmarks</b>, right click it, <b>Edit Address</b>, and paste the code from this button: <button class="btn sm" id="copyBm">Copy bookmark code</button></li>
-  <li>Rename it <b>Send with Trade Lab</b>. Done. It only works on sleeper.com and only after you tap Open in Sleeper here.</li></ol>
-  <p class="small mute">The bookmark reads your Sleeper sign in from sleeper.com itself and sends the trade only to Sleeper. Trade Lab never sees your login. Source: <a href="send-bookmark.js" target="_blank" rel="noopener">send-bookmark.js</a>.</p></details>`);
- $('#sendLink').addEventListener('click',()=>{store.set('bmSetup2',true);try{navigator.clipboard.writeText('TL1:'+code).then(()=>toast('Trade code copied'),()=>{})}catch{}});
- $('#copyBm').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(BOOKMARK);toast('Bookmark code copied')}catch{toast('Copy blocked by the browser')}});
+ <p id="sendMsg" class="small" style="min-height:20px;margin:12px 0 0"></p>
+ <div class="row" id="sendBtns" style="margin-top:6px">${S.tok?`<button class="btn mint" id="sendNow">Send trade</button>`:`<button class="btn mint" id="connectNow">Connect Sleeper to send</button>`}<button class="btn" id="copyPitch">Copy trade</button><a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="${url}" target="_blank" rel="noopener">Open in Sleeper</a></div>`);
+ $('#connectNow')?.addEventListener('click',openConnect);
+ $('#sendNow')?.addEventListener('click',async e=>{const b=e.target;b.disabled=true;b.innerHTML='<span class="loading"></span> Sending';
+  try{const tx=await sendTrade(o,give,get);$('#sendMsg').innerHTML=`<span class="gain"><b>Sent.</b> It is in ${esc(o.mgr)}'s trade inbox now.</span>`;
+   $('#sendBtns').innerHTML=`<button class="btn" id="undoNow">Withdraw</button><a class="btn mint" href="#mine" style="text-decoration:none;display:inline-flex;align-items:center" data-close>See my trades</a>`;
+   $('#undoNow').addEventListener('click',async ev=>{ev.target.disabled=true;try{await rejectTrade(tx.transaction_id,tx.leg);$('#sendMsg').innerHTML='<span style="color:var(--warn)"><b>Withdrawn.</b></span>';ev.target.remove()}catch(er){$('#sendMsg').innerHTML=`<span class="loss">${esc(er.message)}</span>`;ev.target.disabled=false}})}
+  catch(er){b.disabled=false;b.textContent='Try again';$('#sendMsg').innerHTML=`<span class="loss">Sleeper said no: ${esc(er.message)}</span>`}});
  $('#copyPitch').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(txt);toast('Copied')}catch{toast('Copy blocked by the browser')}})}
+
+/* ---------- MY TRADES ---------- */
+let mine=null,mineErr='';
+async function loadMine(){if(!S.lg||!S.tok){renderMine();return}mineErr='';$('#mineBody').innerHTML='<div class="card empty"><h3><span class="loading"></span> Loading your trades from Sleeper</h3></div>';
+ try{mine=await listTrades()}catch(e){mine=null;mineErr=e.message}renderMine()}
+function txSides(tx){const me=S.myRid,uid=S.user?.user_id;const other=(tx.roster_ids||[]).find(r=>r!==me);const get=[],give=[];
+ const pickOf=(season,round,orig,to)=>{const a=S.assets[`P:${season}:${round}:${orig}`];return a||{kind:'pick',pos:'PICK',season:+season,name:`${season} ${ord(+round)}${S.byRid[orig]?' ('+S.byRid[orig].mgr+')':''}`,v:pickValue(+season,+round,null)}};
+ for(const[sid,rid]of Object.entries(tx.adds||{})){const a=S.assets[sid]&&S.assets[sid].kind==='player'?S.assets[sid]:playerAsset(sid,null);(+rid===me?get:give).push(a)}
+ for(const pk of tx.draft_picks||[]){let o,season,round,to;if(typeof pk==='string'){[o,season,round,to]=pk.split(',').map(Number)}else{o=pk.roster_id;season=pk.season;round=pk.round;to=pk.owner_id}(+to===me?get:give).push(pickOf(season,round,o,to))}
+ let faabIn=0,faabOut=0;for(const f of tx.waiver_budget||[]){let fr,to,amt;if(typeof f==='string'){[fr,to,amt]=f.split(',').map(Number)}else{fr=f.sender;to=f.receiver;amt=f.amount}if(to===me)faabIn+=amt;else if(fr===me)faabOut+=amt}
+ return{other:S.byRid[other],get,give,faabIn,faabOut,mine:String(tx.creator)===String(uid)}}
+function renderMine(){const box=$('#mineBody');if(!box)return;
+ if(!S.lg){box.innerHTML='<div class="card empty"><h3>No league loaded</h3></div>';return}
+ if(!S.tok){box.innerHTML=`<div class="card empty"><h3>Connect Sleeper to manage trades here</h3><p>See every pending offer, send, withdraw and decline without opening Sleeper.</p><button class="btn mint" id="mineConnect">Connect Sleeper</button></div>`;$('#mineConnect').addEventListener('click',openConnect);return}
+ if(mineErr){box.innerHTML=`<div class="card empty"><h3>Could not load trades</h3><p>${esc(mineErr)}</p><button class="btn" id="mineRetry">Try again</button> <button class="btn" id="mineRe">Reconnect</button></div>`;$('#mineRetry').addEventListener('click',loadMine);$('#mineRe').addEventListener('click',openConnect);return}
+ if(!mine){box.innerHTML='';return}
+ const pending=mine.filter(t=>['proposed','pending'].includes(t.status)).sort((a,b)=>b.created-a.created);
+ const recent=mine.filter(t=>!['proposed','pending'].includes(t.status)).sort((a,b)=>(b.status_updated||b.created)-(a.status_updated||a.created)).slice(0,12);
+ const card=(tx,live)=>{const s=txSides(tx);const mg=mkt(s.give),mt=mkt(s.get),p=(mt-mg)/Math.max(mg,mt,1),g=grade(p);
+  return `<article class="deal ${live&&!s.mine?'smash':''}" data-tx="${esc(tx.transaction_id)}"><div class="deal-h"><span class="tag ${live&&!s.mine?'smash':''}">${live?(s.mine?'Outgoing':'Incoming'):esc(tx.status==='complete'?'Accepted':tx.status==='rejected'?'Declined or withdrawn':tx.status)}</span><div class="tm" style="gap:8px">${avatar(s.other)}${who(s.other)}</div></div>
+  <div class="swap"><div><h4>You send</h4>${s.give.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabOut?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabOut}</span></div>`:''}</div><div><h4>You get</h4>${s.get.map(miniRow).join('')||'<span class="small mute">Nothing</span>'}${s.faabIn?`<div class="mini"><span class="pos">FAAB</span><span class="n">$${s.faabIn}</span></div>`:''}</div></div>
+  <div class="row" style="justify-content:space-between"><span class="small mute">${new Date(tx.created).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · grade for you <b style="color:${gradeColor(g)}">${g}</b> (${pct(p)})</span>
+  ${live?`<span class="row" style="gap:6px"><button class="btn sm" data-calcfrom="${esc(tx.transaction_id)}">Open in calculator</button>${s.mine?`<button class="btn sm" data-withdraw="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Withdraw</button>`:`<button class="btn sm" data-decline="${esc(tx.transaction_id)}" data-leg="${tx.leg}">Decline</button>`}</span>`:''}</div></article>`};
+ box.innerHTML=`<div class="sec-h"><div><h2>My trades</h2><p class="mute small">Live from Sleeper for ${esc(S.lg.name)}. Accepting an incoming offer still happens in Sleeper for now.</p></div><div class="row"><button class="btn sm" id="mineRefresh">Refresh</button><button class="btn sm" id="mineSettings">Sleeper connection</button></div></div>
+ <h3 style="font-size:24px;margin-bottom:10px">Pending (${pending.length})</h3>${pending.length?`<div class="results" style="margin-top:0">${pending.map(t=>card(t,true)).join('')}</div>`:'<div class="card empty" style="padding:24px"><p>No pending trades. Find one in the Smash finder.</p></div>'}
+ ${recent.length?`<h3 style="font-size:24px;margin:22px 0 10px">Recent</h3><div class="results" style="margin-top:0">${recent.map(t=>card(t,false)).join('')}</div>`:''}`;
+ $('#mineRefresh').addEventListener('click',loadMine);$('#mineSettings').addEventListener('click',openConnect)}
+document.addEventListener('click',async e=>{
+ const w=e.target.closest('[data-withdraw]'),d=e.target.closest('[data-decline]'),c=e.target.closest('[data-calcfrom]');
+ if(c){const tx=mine.find(t=>String(t.transaction_id)===c.dataset.calcfrom);const s=txSides(tx);S.calc={a:S.myRid,b:s.other.rid,give:s.give.filter(a=>a.id).map(a=>a.id),get:s.get.filter(a=>a.id).map(a=>a.id)};renderCalcTeams();renderCalc();location.hash='#calc';return}
+ const b=w||d;if(!b)return;
+ if(d&&!b.dataset.sure){b.dataset.sure='1';b.textContent='Tap again to decline';b.classList.add('mint');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='Decline';b.classList.remove('mint')}},4000);return}
+ b.disabled=true;b.innerHTML='<span class="loading"></span>';
+ try{await rejectTrade(b.dataset.withdraw||b.dataset.decline,b.dataset.leg);toast(w?'Withdrawn':'Declined');await loadMine()}catch(er){toast(er.message);b.disabled=false;b.textContent=w?'Withdraw':'Decline'}});
 
 /* ---------- LOG ---------- */
 let logSort='recent',logMgr='all',logSeason='all';
@@ -999,7 +1062,8 @@ $('#sApply').addEventListener('click',async()=>{
  try{await loadSources();if(S.lg){buildModel();if(S.hist){valueHistory();applyHabits()}S.odds=simOdds()}else S.assets={};renderAll();toast('Re-priced')}catch(e){toast(e.message)}});
 
 /* ---------- routing + boot ---------- */
-function route(){const v=(location.hash||'#league').slice(1);const ok=['league','calc','finder','market','rookies','log','setup'].includes(v)?v:'league';
+function route(){const v=(location.hash||'#league').slice(1);const ok=['league','calc','finder','market','rookies','mine','log','setup'].includes(v)?v:'league';
+ if(ok==='mine')loadMine();
  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+ok));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===ok))}
 addEventListener('hashchange',route);route();
 (async()=>{renderChips();renderCalcTeams();renderCalc();renderFinderSetup();renderLog();
