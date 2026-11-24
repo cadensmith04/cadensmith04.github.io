@@ -5,15 +5,16 @@
 (() => {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   if (!/(^|\.)sleeper\.com$/.test(location.hostname)) { alert('Use this bookmark on sleeper.com after tapping Send in Trade Lab.'); return; }
-  const m = location.hash.match(/tradelab=([A-Za-z0-9_-]+)/);
-  if (!m) { alert('No Trade Lab trade on this page. Tap Send in Trade Lab first, then use this bookmark.'); return; }
-  let t;
-  try { t = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) { alert('Could not read the trade from the link.'); return; }
-  const ok = t && /^\d+$/.test(t.lid) && Array.isArray(t.adds) && Array.isArray(t.drops)
-    && t.adds.concat(t.drops).every(x => /^[A-Za-z0-9]+$/.test(x[0]) && Number.isInteger(x[1]))
-    && (t.picks || []).every(p => /^\d+,\d{4},\d+,\d+,\d+$/.test(p))
-    && (t.faab || []).every(p => /^\d+,\d+,\d+$/.test(p));
-  if (!ok) { alert('This trade link looks malformed, so nothing was sent.'); return; }
+  const grab = str => { const m = String(str || '').match(/(?:tradelab=|TL1:)([A-Za-z0-9_-]{20,})/); return m ? m[1] : null; };
+  const parse = code => {
+    let t;
+    try { t = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) { return null; }
+    const ok = t && /^\d+$/.test(t.lid) && Array.isArray(t.adds) && Array.isArray(t.drops)
+      && t.adds.concat(t.drops).every(x => /^[A-Za-z0-9]+$/.test(x[0]) && Number.isInteger(x[1]))
+      && (t.picks || []).every(p => /^\d+,\d{4},\d+,\d+,\d+$/.test(p))
+      && (t.faab || []).every(p => /^\d+,\d+,\d+$/.test(p));
+    return ok ? t : null;
+  };
   const tok = (localStorage.getItem('token') || '').replace(/^"|"$/g, '');
   if (!tok) { alert('Sign in to Sleeper in this browser first.'); return; }
   const gql = (op, query, variables) => fetch('/graphql', {
@@ -26,18 +27,35 @@
   box.id = 'tl-send';
   box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,6,12,.72);display:flex;align-items:center;justify-content:center;font:15px/1.45 -apple-system,BlinkMacSystemFont,sans-serif';
   const btn = 'border:0;border-radius:10px;padding:10px 16px;font-weight:700;font-size:15px;cursor:pointer;margin-right:8px';
-  box.innerHTML = `<div style="background:#171f2d;color:#eaf0fa;border:1px solid #2a3448;border-radius:16px;padding:22px;max-width:440px;width:92%">
-    <div style="color:#00d4b4;font-weight:800;font-size:13px">TRADE LAB</div>
-    <div style="font-size:21px;font-weight:800;margin:4px 0 10px">Send this trade to ${esc(t.mgr)}?</div>
+  const card = inner => { box.innerHTML = `<div style="background:#171f2d;color:#eaf0fa;border:1px solid #2a3448;border-radius:16px;padding:22px;max-width:440px;width:92%"><div style="color:#00d4b4;font-weight:800;font-size:13px">TRADE LAB</div>${inner}</div>`; };
+  document.body.appendChild(box);
+  const msg = s => { const el = box.querySelector('#tl-msg'); if (el) el.innerHTML = s; };
+  const close = () => { box.remove(); if (location.hash.includes('tradelab')) history.replaceState(null, '', location.pathname + location.search); };
+  let t = null;
+  const showPaste = () => {
+    card(`<div style="font-size:21px;font-weight:800;margin:4px 0 8px">Paste your trade</div>
+      <div style="color:#8c98ae;font-size:13px;margin-bottom:10px">Tapping Open in Sleeper in Trade Lab copied a trade code. Paste it here with Command + V.</div>
+      <input id="tl-code" placeholder="TL1:..." style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid #2a3448;background:#121926;color:#eaf0fa;font-size:16px;margin-bottom:10px">
+      <div id="tl-msg" style="color:#8c98ae;font-size:13px;min-height:20px;margin-bottom:12px"></div>
+      <div><button id="tl-next" style="${btn};background:#00d4b4;color:#002b25">Continue</button><button id="tl-no" style="${btn};background:#2a3448;color:#eaf0fa">Cancel</button></div>`);
+    const inp = box.querySelector('#tl-code');
+    const tryCode = v => { const c = grab(v); const tt = c && parse(c); if (tt) { t = tt; showTrade(); return true; } return false; };
+    inp.addEventListener('input', () => tryCode(inp.value));
+    box.querySelector('#tl-next').onclick = () => { if (!tryCode(inp.value)) msg('<span style="color:#ff5d6e">That is not a Trade Lab code. Copy it again from Trade Lab.</span>'); };
+    box.querySelector('#tl-no').onclick = close;
+    inp.focus();
+    if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(v => { if (!t) { inp.value = v; tryCode(v); } }).catch(() => {});
+  };
+  const showTrade = () => {
+    card(`<div style="font-size:21px;font-weight:800;margin:4px 0 10px">Send this trade to ${esc(t.mgr)}?</div>
     <div style="color:#8c98ae;font-size:13px">You send</div><div style="margin-bottom:8px">${esc((t.give || []).join(', ') || 'Nothing')}</div>
     <div style="color:#8c98ae;font-size:13px">You get</div><div style="margin-bottom:14px">${esc((t.get || []).join(', ') || 'Nothing')}</div>
     <div id="tl-msg" style="color:#8c98ae;font-size:13px;min-height:20px;margin-bottom:12px"></div>
-    <div id="tl-btns"><button id="tl-go" style="${btn};background:#00d4b4;color:#002b25">Send trade</button><button id="tl-no" style="${btn};background:#2a3448;color:#eaf0fa">Cancel</button></div></div>`;
-  document.body.appendChild(box);
-  const msg = s => { box.querySelector('#tl-msg').innerHTML = s; };
-  const close = () => { box.remove(); history.replaceState(null, '', location.pathname + location.search); };
-  box.querySelector('#tl-no').onclick = close;
-  box.querySelector('#tl-go').onclick = async () => {
+    <div id="tl-btns"><button id="tl-go" style="${btn};background:#00d4b4;color:#002b25">Send trade</button><button id="tl-no" style="${btn};background:#2a3448;color:#eaf0fa">Cancel</button></div>`);
+    box.querySelector('#tl-no').onclick = close;
+    box.querySelector('#tl-go').onclick = send;
+  };
+  const send = async () => {
     const go = box.querySelector('#tl-go'); go.disabled = true; go.textContent = 'Sending…';
     const S = JSON.stringify;
     const q = `mutation propose_trade($k_adds: [String], $v_adds: [Int], $k_drops: [String], $v_drops: [Int]) {
@@ -57,4 +75,7 @@
       };
     } catch (e) { go.disabled = false; go.textContent = 'Try again'; msg(`<span style="color:#ff5d6e">${esc(e.message)}</span>`); }
   };
+  const code = grab(location.hash) || grab(location.search);
+  t = code && parse(code);
+  if (t) showTrade(); else showPaste();
 })();
